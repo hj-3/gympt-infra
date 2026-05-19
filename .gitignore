@@ -1,0 +1,65 @@
+# Archive
+archive/
+
+# Terraform
+**/.terraform/
+**/.terraform.lock.hcl
+**/terraform.tfstate
+**/terraform.tfstate.backup
+**/.terraform.tfstate.lock.info
+**/tfplan
+**/crash.log
+**/override.tf
+**/override.tf.json
+**/*_override.tf
+**/*_override.tf.json
+**/*.tfvars
+**/*.tfvars.json
+!**/*.tfvars.example
+
+# AWS Credentials (NEVER COMMIT)
+**/*credentials*
+**/*secret*
+**/*password*
+!**/*.example
+!**/*.md
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.bak
+*.backup
+
+# Secrets
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+credentials.json
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv
+
+# Ansible
+*.retry
+ansible.log

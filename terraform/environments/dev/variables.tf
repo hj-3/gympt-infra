@@ -1,0 +1,51 @@
+variable "project_name" {
+  description = "Project name"
+  type        = string
+  default     = "gympt"
+}
+
+variable "environment" {
+  description = "Environment name"
+  type        = string
+  default     = "dev"
+}
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+  default     = "ap-northeast-2"
+}
+
+# Network
+variable "vpc_cidr" {
+  description = "VPC CIDR block"
+  type        = string
+  default     = "10.0.0.0/16"
+}
+
+# EKS
+variable "eks_cluster_version" {
+  description = "EKS cluster version"
+  type        = string
+  default     = "1.29"
+}
+
+# RDS
+variable "rds_instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t3.medium"
+}
+
+variable "rds_allocated_storage" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 100
+}
+
+# ElastiCache
+variable "elasticache_node_type" {
+  description = "ElastiCache node type"
+  type        = string
+  default     = "cache.t3.micro"
+}
