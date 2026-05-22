@@ -26,6 +26,16 @@ provider "aws" {
   }
 }
 
+# ACM 인증서는 us-east-1에 있어야 CloudFront에서 사용 가능
+provider "aws" {
+  alias  = "us_east_1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -92,7 +102,10 @@ module "rds" {
   env                       = local.env
   vpc_id                    = module.vpc.vpc_id
   db_subnet_ids             = module.vpc.private_db_subnet_ids
-  allowed_security_group_ids = [module.eks.node_security_group_id]
+  allowed_security_group_ids = [
+    module.eks.node_security_group_id,
+    module.eks.cluster_security_group_id
+  ]
   instance_class            = "db.t3.large"
   allocated_storage         = 100
   engine_version            = "17.2"
@@ -120,7 +133,10 @@ module "elasticache" {
   env                       = local.env
   vpc_id                    = module.vpc.vpc_id
   cache_subnet_ids          = module.vpc.private_app_subnet_ids
-  allowed_security_group_ids = [module.eks.node_security_group_id]
+  allowed_security_group_ids = [
+    module.eks.node_security_group_id,
+    module.eks.cluster_security_group_id
+  ]
   node_type                 = "cache.t3.medium"
   num_cache_nodes           = 2
   engine_version            = "7.0"
@@ -132,28 +148,36 @@ module "elasticache" {
   common_tags               = local.common_tags
 }
 
+# ============================================
+# Frontend 리소스 (기존 수동 생성 리소스 참조)
+# ============================================
+data "aws_s3_bucket" "existing_frontend" {
+  bucket = "gympt-fe-deploy-337112169365"
+}
+
+data "aws_cloudfront_distribution" "existing_frontend" {
+  id = "E14Z61F5I2E9ZM"
+}
+
+data "aws_acm_certificate" "existing_cert" {
+  domain   = "g2mpt.com"
+  statuses = ["ISSUED"]
+  provider = aws.us_east_1
+}
+
+# S3 버킷 (frontend 제외, 나머지만 생성)
 module "s3" {
   source = "../../modules/s3"
 
-  project_name = local.project_name
-  env          = local.env
-  account_id   = local.account_id
-  common_tags  = local.common_tags
+  project_name       = local.project_name
+  env                = local.env
+  account_id         = local.account_id
+  create_frontend    = false  # Frontend 버킷은 이미 존재
+  common_tags        = local.common_tags
 }
 
-module "cloudfront" {
-  source = "../../modules/cloudfront"
-
-  project_name                      = local.project_name
-  env                               = local.env
-  frontend_bucket_id                = module.s3.frontend_bucket_id
-  frontend_bucket_arn               = module.s3.frontend_bucket_arn
-  frontend_bucket_domain_name       = module.s3.frontend_bucket_domain_name
-  price_class                       = "PriceClass_200"
-  web_acl_id                        = module.waf.web_acl_id
-  enable_spa_routing                = true
-  common_tags                       = local.common_tags
-}
+# CloudFront는 기존 것 사용 (모듈 비활성화)
+# module "cloudfront" 제거
 
 module "sqs" {
   source = "../../modules/sqs"
@@ -161,6 +185,37 @@ module "sqs" {
   project_name = local.project_name
   env          = local.env
   common_tags  = local.common_tags
+}
+
+# Lambda (must be before EventBridge as EventBridge references Lambda ARNs)
+module "lambda" {
+  source = "../../modules/lambda"
+
+  project_name            = local.project_name
+  env                     = local.env
+  aws_region              = local.aws_region
+  lambda_artifact_bucket  = module.s3.lambda_artifacts_bucket_id
+  dynamodb_table_arns     = values(module.dynamodb.table_arns)
+  s3_bucket_arns          = values(module.s3.bucket_arns)
+  sqs_queue_arns          = values(module.sqs.queue_arns)
+  secrets_manager_arns    = []
+  vpc_config_enabled      = true
+  vpc_subnet_ids          = module.vpc.private_app_subnet_ids
+  vpc_security_group_ids  = [module.eks.node_security_group_id]
+  xray_tracing_enabled    = true
+  log_retention_days      = 30
+  alarm_actions           = []  # CloudWatch SNS topic will be added after module is created
+  common_tags             = local.common_tags
+
+  sqs_event_sources = {
+    report-generator        = { queue_arn = module.sqs.queue_arns["report-generation"], batch_size = 1, max_concurrency = 10 }
+    posture-event-processor = { queue_arn = module.sqs.queue_arns["posture-event"], batch_size = 10, max_concurrency = 20 }
+    thumbnail-generator     = { queue_arn = module.sqs.queue_arns["thumbnail-generation"], batch_size = 1, max_concurrency = 5 }
+    wearable-sync           = { queue_arn = module.sqs.queue_arns["wearable-sync"], batch_size = 10, max_concurrency = 10 }
+    recommendation-update   = { queue_arn = module.sqs.queue_arns["recommendation-update"], batch_size = 1, max_concurrency = 5 }
+    notification            = { queue_arn = module.sqs.queue_arns["notification"], batch_size = 10, max_concurrency = 20 }
+    export                  = { queue_arn = module.sqs.queue_arns["export"], batch_size = 1, max_concurrency = 3 }
+  }
 }
 
 module "eventbridge" {
@@ -180,41 +235,12 @@ module "eventbridge" {
   common_tags                  = local.common_tags
 }
 
-module "lambda" {
-  source = "../../modules/lambda"
-
-  project_name            = local.project_name
-  env                     = local.env
-  aws_region              = local.aws_region
-  lambda_artifact_bucket  = module.s3.lambda_artifacts_bucket_id
-  dynamodb_table_arns     = values(module.dynamodb.table_arns)
-  s3_bucket_arns          = values(module.s3.bucket_arns)
-  sqs_queue_arns          = values(module.sqs.queue_arns)
-  secrets_manager_arns    = []
-  vpc_config_enabled      = true
-  vpc_subnet_ids          = module.vpc.private_app_subnet_ids
-  vpc_security_group_ids  = [module.eks.node_security_group_id]
-  xray_tracing_enabled    = true
-  log_retention_days      = 30
-  alarm_actions           = [module.cloudwatch.sns_topic_arn]
-  common_tags             = local.common_tags
-
-  sqs_event_sources = {
-    report-generator        = { queue_arn = module.sqs.queue_arns["report-generation"], batch_size = 1, max_concurrency = 10 }
-    posture-event-processor = { queue_arn = module.sqs.queue_arns["posture-event"], batch_size = 10, max_concurrency = 20 }
-    thumbnail-generator     = { queue_arn = module.sqs.queue_arns["thumbnail-generation"], batch_size = 1, max_concurrency = 5 }
-    wearable-sync           = { queue_arn = module.sqs.queue_arns["wearable-sync"], batch_size = 10, max_concurrency = 10 }
-    recommendation-update   = { queue_arn = module.sqs.queue_arns["recommendation-update"], batch_size = 1, max_concurrency = 5 }
-    notification            = { queue_arn = module.sqs.queue_arns["notification"], batch_size = 10, max_concurrency = 20 }
-    export                  = { queue_arn = module.sqs.queue_arns["export"], batch_size = 1, max_concurrency = 3 }
-  }
-}
-
 module "waf" {
   source = "../../modules/waf"
 
   project_name = local.project_name
   env          = local.env
+  aws_region   = local.aws_region
   scope        = "REGIONAL"
   rate_limit   = 5000
   common_tags  = local.common_tags
@@ -249,7 +275,7 @@ module "karpenter" {
   env                = local.env
   oidc_provider_arn  = module.eks.oidc_provider_arn
   oidc_provider_url  = module.eks.oidc_provider_url
-  eks_node_role_name = module.eks.node_role_arn
+  eks_node_role_name = module.eks.node_role_name
   common_tags        = local.common_tags
 }
 
@@ -267,10 +293,11 @@ module "cloudwatch" {
 module "cloudtrail" {
   source = "../../modules/cloudtrail"
 
-  project_name   = local.project_name
-  env            = local.env
-  s3_bucket_name = module.s3.logs_bucket_id
-  common_tags    = local.common_tags
+  project_name         = local.project_name
+  env                  = local.env
+  s3_bucket_name       = module.s3.logs_bucket_id
+  s3_bucket_policy_id  = module.s3.logs_bucket_policy_id
+  common_tags          = local.common_tags
 }
 
 module "athena" {
