@@ -24,13 +24,13 @@ output "redis_endpoint" {
 }
 
 output "cloudfront_distribution_id" {
-  description = "CloudFront distribution ID"
-  value       = module.cloudfront.distribution_id
+  description = "CloudFront distribution ID (existing)"
+  value       = data.aws_cloudfront_distribution.existing_frontend.id
 }
 
 output "cloudfront_domain_name" {
-  description = "CloudFront domain name"
-  value       = module.cloudfront.distribution_domain_name
+  description = "CloudFront domain name (existing)"
+  value       = data.aws_cloudfront_distribution.existing_frontend.domain_name
 }
 
 output "ecr_repository_urls" {
@@ -38,14 +38,15 @@ output "ecr_repository_urls" {
   value       = module.ecr.repository_urls
 }
 
-output "lambda_function_names" {
-  description = "Lambda function names"
-  value       = module.lambda.lambda_function_names
-}
+# Lambda 모듈 비활성화로 주석 처리
+# output "lambda_function_names" {
+#   description = "Lambda function names"
+#   value       = module.lambda.lambda_function_names
+# }
 
 output "s3_frontend_bucket" {
-  description = "Frontend S3 bucket name"
-  value       = module.s3.frontend_bucket_id
+  description = "Frontend S3 bucket name (existing)"
+  value       = data.aws_s3_bucket.existing_frontend.id
 }
 
 output "dynamodb_table_names" {
@@ -56,4 +57,9 @@ output "dynamodb_table_names" {
 output "sqs_queue_urls" {
   description = "SQS queue URLs"
   value       = module.sqs.queue_urls
+}
+
+output "alb_controller_role_arn" {
+  description = "IAM role ARN for AWS Load Balancer Controller"
+  value       = module.eks.alb_controller_role_arn
 }

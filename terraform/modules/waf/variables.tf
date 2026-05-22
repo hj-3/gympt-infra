@@ -23,6 +23,10 @@ variable "log_retention_days" {
   default = 7
 }
 
+variable "aws_region" {
+  type = string
+}
+
 variable "common_tags" {
   type    = map(string)
   default = {}

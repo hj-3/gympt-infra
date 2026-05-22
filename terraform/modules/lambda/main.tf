@@ -96,7 +96,7 @@ resource "aws_iam_role_policy" "lambda_custom" {
         Action = [
           "secretsmanager:GetSecretValue"
         ]
-        Resource = var.secrets_manager_arns
+        Resource = length(var.secrets_manager_arns) > 0 ? var.secrets_manager_arns : ["arn:aws:secretsmanager:${var.aws_region}:*:secret:${local.name_prefix}/*"]
       },
       {
         Effect = "Allow"
@@ -134,7 +134,7 @@ resource "aws_lambda_function" "functions" {
     variables = merge(
       {
         ENV              = var.env
-        AWS_REGION       = var.aws_region
+        REGION           = var.aws_region
         LOG_LEVEL        = var.log_level
       },
       var.environment_variables
@@ -149,8 +149,11 @@ resource "aws_lambda_function" "functions" {
     }
   }
 
-  dead_letter_config {
-    target_arn = var.dlq_arn
+  dynamic "dead_letter_config" {
+    for_each = var.dlq_arn != null ? [1] : []
+    content {
+      target_arn = var.dlq_arn
+    }
   }
 
   tracing_config {

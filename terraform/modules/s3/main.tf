@@ -2,8 +2,9 @@ locals {
   name_prefix = "${var.project_name}-${var.env}"
 }
 
-# Frontend Bucket
+# Frontend Bucket (조건부 생성)
 resource "aws_s3_bucket" "frontend" {
+  count  = var.create_frontend ? 1 : 0
   bucket = "${local.name_prefix}-frontend-${var.account_id}"
 
   tags = merge(
@@ -16,7 +17,8 @@ resource "aws_s3_bucket" "frontend" {
 }
 
 resource "aws_s3_bucket_versioning" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.create_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   versioning_configuration {
     status = "Enabled"
@@ -24,7 +26,8 @@ resource "aws_s3_bucket_versioning" "frontend" {
 }
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.create_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   rule {
     apply_server_side_encryption_by_default {
@@ -34,7 +37,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
 }
 
 resource "aws_s3_bucket_public_access_block" "frontend" {
-  bucket = aws_s3_bucket.frontend.id
+  count  = var.create_frontend ? 1 : 0
+  bucket = aws_s3_bucket.frontend[0].id
 
   block_public_acls       = true
   block_public_policy     = true
@@ -61,6 +65,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "media" {
   rule {
     id     = "transition-to-ia"
     status = "Enabled"
+
+    filter {}
 
     transition {
       days          = 30
@@ -94,10 +100,46 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
     id     = "delete-old-logs"
     status = "Enabled"
 
+    filter {}
+
     expiration {
       days = 90
     }
   }
+}
+
+# CloudTrail bucket policy
+resource "aws_s3_bucket_policy" "logs" {
+  bucket = aws_s3_bucket.logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AWSCloudTrailAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.logs.arn
+      },
+      {
+        Sid    = "AWSCloudTrailWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudtrail.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl" = "bucket-owner-full-control"
+          }
+        }
+      }
+    ]
+  })
 }
 
 # Lambda Artifacts Bucket

@@ -1,0 +1,8 @@
+# RDS Master Password (minimum 8 characters)
+rds_master_password = "CHANGE_ME_STRONG_PASSWORD_HERE"
+
+# Redis AUTH Token (minimum 16 characters)
+redis_auth_token = "CHANGE_ME_STRONG_TOKEN_HERE"
+
+# Email for CloudWatch Alarms (optional)
+alarm_email = "your-email@example.com"

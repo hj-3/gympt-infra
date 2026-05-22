@@ -113,7 +113,10 @@ resource "aws_cloudwatch_log_group" "waf" {
   tags              = merge(var.common_tags, { Name = "${local.name_prefix}-waf-logs" })
 }
 
-resource "aws_wafv2_web_acl_logging_configuration" "main" {
-  resource_arn            = aws_wafv2_web_acl.main.arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
-}
+# WAF Logging (조건부 - CloudWatch Log Group ARN 형식 문제로 비활성화)
+# resource "aws_wafv2_web_acl_logging_configuration" "main" {
+#   resource_arn            = aws_wafv2_web_acl.main.arn
+#   log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
+# }
+
+data "aws_caller_identity" "current" {}

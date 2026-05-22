@@ -12,7 +12,7 @@ NC='\033[0m'
 
 # Configuration
 ENV="${1:-dev}"
-CLUSTER_NAME="gympt-${ENV}-cluster"
+CLUSTER_NAME="gympt-${ENV}-eks"
 REGION="${AWS_REGION:-ap-northeast-2}"
 
 # Usage information

@@ -49,6 +49,11 @@ output "node_role_arn" {
   value       = aws_iam_role.node.arn
 }
 
+output "node_role_name" {
+  description = "IAM role name for EKS nodes"
+  value       = aws_iam_role.node.name
+}
+
 output "cluster_role_arn" {
   description = "IAM role ARN for EKS cluster"
   value       = aws_iam_role.cluster.arn
@@ -62,4 +67,14 @@ output "general_node_group_id" {
 output "gpu_node_group_id" {
   description = "GPU node group ID (if enabled)"
   value       = var.enable_gpu_node_group ? aws_eks_node_group.gpu[0].id : null
+}
+
+output "alb_controller_role_arn" {
+  description = "IAM role ARN for AWS Load Balancer Controller"
+  value       = aws_iam_role.alb_controller.arn
+}
+
+output "alb_controller_role_name" {
+  description = "IAM role name for AWS Load Balancer Controller"
+  value       = aws_iam_role.alb_controller.name
 }

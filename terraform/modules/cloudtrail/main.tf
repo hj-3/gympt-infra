@@ -15,4 +15,6 @@ resource "aws_cloudtrail" "main" {
   }
 
   tags = merge(var.common_tags, { Name = "${local.name_prefix}-trail" })
+
+  depends_on = [var.s3_bucket_policy_id]
 }

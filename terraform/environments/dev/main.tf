@@ -175,25 +175,7 @@ module "sqs" {
   common_tags  = local.common_tags
 }
 
-# EventBridge
-module "eventbridge" {
-  source = "../../modules/eventbridge"
-
-  project_name                 = local.project_name
-  env                          = local.env
-  report_queue_arn             = module.sqs.queue_arns["report-generation"]
-  recommendation_queue_arn     = module.sqs.queue_arns["recommendation-update"]
-  notification_queue_arn       = module.sqs.queue_arns["notification"]
-  wearable_sync_queue_arn      = module.sqs.queue_arns["wearable-sync"]
-  report_generator_lambda_arn  = module.lambda.lambda_function_arns["report-generator"]
-  report_generator_lambda_name = module.lambda.lambda_function_names["report-generator"]
-  recommendation_lambda_arn    = module.lambda.lambda_function_arns["recommendation-update"]
-  recommendation_lambda_name   = module.lambda.lambda_function_names["recommendation-update"]
-  archive_retention_days       = 30
-  common_tags                  = local.common_tags
-}
-
-# Lambda
+# Lambda (must be before EventBridge as EventBridge references Lambda ARNs)
 module "lambda" {
   source = "../../modules/lambda"
 
@@ -219,6 +201,24 @@ module "lambda" {
     notification            = { queue_arn = module.sqs.queue_arns["notification"], batch_size = 10, max_concurrency = 10 }
     export                  = { queue_arn = module.sqs.queue_arns["export"], batch_size = 1, max_concurrency = 2 }
   }
+}
+
+# EventBridge
+module "eventbridge" {
+  source = "../../modules/eventbridge"
+
+  project_name                 = local.project_name
+  env                          = local.env
+  report_queue_arn             = module.sqs.queue_arns["report-generation"]
+  recommendation_queue_arn     = module.sqs.queue_arns["recommendation-update"]
+  notification_queue_arn       = module.sqs.queue_arns["notification"]
+  wearable_sync_queue_arn      = module.sqs.queue_arns["wearable-sync"]
+  report_generator_lambda_arn  = module.lambda.lambda_function_arns["report-generator"]
+  report_generator_lambda_name = module.lambda.lambda_function_names["report-generator"]
+  recommendation_lambda_arn    = module.lambda.lambda_function_arns["recommendation-update"]
+  recommendation_lambda_name   = module.lambda.lambda_function_names["recommendation-update"]
+  archive_retention_days       = 30
+  common_tags                  = local.common_tags
 }
 
 # WAF

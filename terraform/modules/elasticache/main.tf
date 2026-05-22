@@ -79,9 +79,9 @@ resource "aws_elasticache_parameter_group" "main" {
 
 # ElastiCache Replication Group (Cluster Mode Disabled)
 resource "aws_elasticache_replication_group" "main" {
-  replication_group_id       = "${local.name_prefix}-redis"
-  replication_group_description = "Redis cluster for ${local.name_prefix}"
-  
+  replication_group_id = "${local.name_prefix}-redis"
+  description          = "Redis cluster for ${local.name_prefix}"
+
   engine               = "redis"
   engine_version       = var.engine_version
   node_type            = var.node_type
@@ -94,7 +94,6 @@ resource "aws_elasticache_replication_group" "main" {
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
-  auth_token_enabled         = var.auth_token_enabled
   auth_token                 = var.auth_token_enabled ? var.auth_token : null
   kms_key_id                 = var.kms_key_id
 

@@ -1,16 +1,16 @@
 output "frontend_bucket_id" {
   description = "Frontend S3 bucket ID"
-  value       = aws_s3_bucket.frontend.id
+  value       = var.create_frontend ? aws_s3_bucket.frontend[0].id : null
 }
 
 output "frontend_bucket_arn" {
   description = "Frontend S3 bucket ARN"
-  value       = aws_s3_bucket.frontend.arn
+  value       = var.create_frontend ? aws_s3_bucket.frontend[0].arn : null
 }
 
 output "frontend_bucket_domain_name" {
   description = "Frontend S3 bucket regional domain name"
-  value       = aws_s3_bucket.frontend.bucket_regional_domain_name
+  value       = var.create_frontend ? aws_s3_bucket.frontend[0].bucket_regional_domain_name : null
 }
 
 output "media_bucket_id" {
@@ -31,6 +31,11 @@ output "logs_bucket_id" {
 output "logs_bucket_arn" {
   description = "Logs S3 bucket ARN"
   value       = aws_s3_bucket.logs.arn
+}
+
+output "logs_bucket_policy_id" {
+  description = "Logs S3 bucket policy ID"
+  value       = aws_s3_bucket_policy.logs.id
 }
 
 output "lambda_artifacts_bucket_id" {
@@ -56,7 +61,6 @@ output "athena_results_bucket_arn" {
 output "bucket_arns" {
   description = "Map of all S3 bucket ARNs"
   value = {
-    frontend         = aws_s3_bucket.frontend.arn
     media            = aws_s3_bucket.media.arn
     logs             = aws_s3_bucket.logs.arn
     lambda_artifacts = aws_s3_bucket.lambda_artifacts.arn

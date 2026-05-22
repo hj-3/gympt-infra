@@ -86,8 +86,9 @@ aws s3api put-bucket-lifecycle-configuration \
     --bucket "${BUCKET_NAME}" \
     --lifecycle-configuration '{
         "Rules": [{
-            "Id": "DeleteOldVersions",
+            "ID": "DeleteOldVersions",
             "Status": "Enabled",
+            "Filter": {},
             "NoncurrentVersionExpiration": {
                 "NoncurrentDays": 90
             }
@@ -97,7 +98,7 @@ echo -e "${GREEN}✓${NC} Security and lifecycle policies configured"
 
 # Create DynamoDB table for state locking
 echo -e "${BLUE}[6/6]${NC} Creating DynamoDB table..."
-if aws dynamodb describe-table --table-name "${DYNAMODB_TABLE}" --region "${REGION}" 2>/dev/null; then
+if aws dynamodb describe-table --table-name "${DYNAMODB_TABLE}" --region "${REGION}" >/dev/null 2>&1; then
     echo -e "${YELLOW}!${NC} DynamoDB table already exists"
 else
     aws dynamodb create-table \
@@ -106,11 +107,21 @@ else
         --key-schema AttributeName=LockID,KeyType=HASH \
         --billing-mode PAY_PER_REQUEST \
         --region "${REGION}" \
-        --tags Key=Project,Value=gympt Key=ManagedBy,Value=script
+        --tags Key=Project,Value=gympt Key=ManagedBy,Value=script >/dev/null 2>&1
 
-    echo -e "${YELLOW}Waiting for table to be active...${NC}"
-    aws dynamodb wait table-exists --table-name "${DYNAMODB_TABLE}" --region "${REGION}"
-    echo -e "${GREEN}✓${NC} DynamoDB table created"
+    echo -e "${YELLOW}Waiting for table to be active (max 30s)...${NC}"
+    for i in {1..30}; do
+        STATUS=$(aws dynamodb describe-table --table-name "${DYNAMODB_TABLE}" --region "${REGION}" --query 'Table.TableStatus' --output text 2>/dev/null)
+        if [ "$STATUS" = "ACTIVE" ]; then
+            echo -e "${GREEN}✓${NC} DynamoDB table created"
+            break
+        fi
+        sleep 1
+    done
+
+    if [ "$STATUS" != "ACTIVE" ]; then
+        echo -e "${YELLOW}⚠${NC} Table is being created (Status: ${STATUS}). It will be ready soon."
+    fi
 fi
 
 echo ""
