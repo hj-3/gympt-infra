@@ -160,9 +160,10 @@ data "aws_cloudfront_distribution" "existing_frontend" {
 }
 
 data "aws_acm_certificate" "existing_cert" {
-  domain   = "g2mpt.com"
-  statuses = ["ISSUED"]
-  provider = aws.us_east_1
+  domain      = "g2mpt.com"
+  statuses    = ["ISSUED"]
+  most_recent = true
+  provider    = aws.us_east_1
 }
 
 # S3 버킷 (frontend 제외, 나머지만 생성)
