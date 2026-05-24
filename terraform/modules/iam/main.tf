@@ -73,3 +73,38 @@ resource "aws_iam_policy" "pod_dynamodb_access" {
   })
   tags = var.common_tags
 }
+
+# Bedrock access policy for agent-service
+resource "aws_iam_policy" "pod_bedrock_access" {
+  name = "${local.name_prefix}-pod-bedrock-access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock:InvokeModel",
+          "bedrock:InvokeModelWithResponseStream"
+        ]
+        Resource = [
+          "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock-agent-runtime:InvokeAgent",
+          "bedrock-agent-runtime:Retrieve"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+  tags = var.common_tags
+}
+
+# Attach Bedrock policy to agent-service role
+resource "aws_iam_role_policy_attachment" "agent_service_bedrock" {
+  role       = aws_iam_role.eks_pod_role["agent-service"].name
+  policy_arn = aws_iam_policy.pod_bedrock_access.arn
+}
