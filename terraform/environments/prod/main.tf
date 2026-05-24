@@ -333,3 +333,25 @@ module "monitoring" {
   sqs_age_threshold = 300
   common_tags      = local.common_tags
 }
+
+module "kvs" {
+  source = "../../modules/kvs"
+
+  environment           = local.env
+  eks_oidc_provider_arn = module.eks.oidc_provider_arn
+  kvs_namespace         = "prod"
+
+  streams = {
+    workout-sessions = {
+      retention_hours = 24
+    }
+  }
+
+  webrtc_channels = {
+    live-sessions = {
+      enabled = true
+    }
+  }
+
+  tags = local.common_tags
+}

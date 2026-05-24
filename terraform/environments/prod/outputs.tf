@@ -63,3 +63,18 @@ output "alb_controller_role_arn" {
   description = "IAM role ARN for AWS Load Balancer Controller"
   value       = module.eks.alb_controller_role_arn
 }
+
+output "kvs_stream_arns" {
+  description = "KVS stream ARNs"
+  value       = module.kvs.stream_arns
+}
+
+output "kvs_producer_role_arn" {
+  description = "KVS producer IAM role ARN"
+  value       = module.kvs.producer_role_arn
+}
+
+output "kvs_consumer_role_arn" {
+  description = "KVS consumer IAM role ARN"
+  value       = module.kvs.consumer_role_arn
+}

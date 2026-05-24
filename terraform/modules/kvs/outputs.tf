@@ -1,27 +1,28 @@
 output "stream_arns" {
   description = "Map of KVS stream ARNs by stream name"
-  value       = { for k, v in aws_kinesisvideo_stream.main : k => v.arn }
+  value       = { for k, v in aws_kinesis_video_stream.main : k => v.arn }
 }
 
 output "stream_names" {
   description = "Map of KVS stream names by stream key"
-  value       = { for k, v in aws_kinesisvideo_stream.main : k => v.name }
+  value       = { for k, v in aws_kinesis_video_stream.main : k => v.name }
 }
 
 output "stream_ids" {
   description = "Map of KVS stream IDs by stream name"
-  value       = { for k, v in aws_kinesisvideo_stream.main : k => v.id }
+  value       = { for k, v in aws_kinesis_video_stream.main : k => v.id }
 }
 
-output "signaling_channel_arns" {
-  description = "Map of WebRTC signaling channel ARNs by channel name"
-  value       = { for k, v in aws_kinesisvideo_signaling_channel.webrtc : k => v.arn }
-}
+# Signaling channels must be created manually via AWS CLI
+# output "signaling_channel_arns" {
+#   description = "Map of WebRTC signaling channel ARNs by channel name"
+#   value       = { for k, v in aws_kinesis_video_signaling_channel.webrtc : k => v.arn }
+# }
 
-output "signaling_channel_names" {
-  description = "Map of WebRTC signaling channel names by channel key"
-  value       = { for k, v in aws_kinesisvideo_signaling_channel.webrtc : k => v.name }
-}
+# output "signaling_channel_names" {
+#   description = "Map of WebRTC signaling channel names by channel key"
+#   value       = { for k, v in aws_kinesis_video_signaling_channel.webrtc : k => v.name }
+# }
 
 output "producer_role_arn" {
   description = "IAM role ARN for KVS stream producers (camera/encoder pods)"

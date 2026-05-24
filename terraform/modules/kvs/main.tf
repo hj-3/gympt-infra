@@ -1,4 +1,4 @@
-resource "aws_kinesisvideo_stream" "main" {
+resource "aws_kinesis_video_stream" "main" {
   for_each = var.streams
 
   name                    = "${var.environment}-${each.key}"
@@ -12,18 +12,11 @@ resource "aws_kinesisvideo_stream" "main" {
   })
 }
 
-resource "aws_kinesisvideo_signaling_channel" "webrtc" {
-  for_each = var.webrtc_channels
-
-  name = "${var.environment}-${each.key}-signaling"
-
-  tags = merge(var.tags, {
-    Name        = "${var.environment}-${each.key}-signaling"
-    Environment = var.environment
-    ManagedBy   = "terraform"
-    Service     = "kvs-webrtc"
-  })
-}
+# Note: AWS Provider does not have a resource for signaling channels yet
+# Signaling channels must be created manually or via AWS CLI/SDK
+# resource "aws_kinesis_video_signaling_channel" "webrtc" {
+#   name = "${var.environment}-live-sessions-signaling"
+# }
 
 # IAM role for KVS access from EKS pods (IRSA)
 resource "aws_iam_role" "kvs_producer" {
@@ -66,7 +59,7 @@ resource "aws_iam_role_policy" "kvs_producer" {
           "kinesisvideo:DescribeStream",
           "kinesisvideo:GetDataEndpoint"
         ]
-        Resource = [for s in aws_kinesisvideo_stream.main : s.arn]
+        Resource = [for s in aws_kinesis_video_stream.main : s.arn]
       },
       {
         Effect = "Allow"
@@ -76,7 +69,7 @@ resource "aws_iam_role_policy" "kvs_producer" {
           "kinesisvideo:GetIceServerConfig",
           "kinesisvideo:SendAlexaOfferToMaster"
         ]
-        Resource = [for c in aws_kinesisvideo_signaling_channel.webrtc : c.arn]
+        Resource = "arn:aws:kinesisvideo:*:*:channel/${var.environment}-*/*"
       }
     ]
   })
@@ -125,7 +118,7 @@ resource "aws_iam_role_policy" "kvs_consumer" {
           "kinesisvideo:DescribeStream",
           "kinesisvideo:GetDataEndpoint"
         ]
-        Resource = [for s in aws_kinesisvideo_stream.main : s.arn]
+        Resource = [for s in aws_kinesis_video_stream.main : s.arn]
       },
       {
         Effect = "Allow"
@@ -136,7 +129,7 @@ resource "aws_iam_role_policy" "kvs_consumer" {
           "kinesisvideo:ConnectAsMaster",
           "kinesisvideo:ConnectAsViewer"
         ]
-        Resource = [for c in aws_kinesisvideo_signaling_channel.webrtc : c.arn]
+        Resource = "arn:aws:kinesisvideo:*:*:channel/${var.environment}-*/*"
       }
     ]
   })
@@ -158,7 +151,7 @@ resource "aws_cloudwatch_metric_alarm" "put_media_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    StreamName = aws_kinesisvideo_stream.main[each.key].name
+    StreamName = aws_kinesis_video_stream.main[each.key].name
   }
 
   tags = merge(var.tags, {
@@ -183,7 +176,7 @@ resource "aws_cloudwatch_metric_alarm" "incoming_bytes_low" {
   treat_missing_data  = "breaching"
 
   dimensions = {
-    StreamName = aws_kinesisvideo_stream.main[each.key].name
+    StreamName = aws_kinesis_video_stream.main[each.key].name
   }
 
   tags = merge(var.tags, {
