@@ -91,7 +91,7 @@ module "eks" {
   gpu_node_instance_types = ["g4dn.xlarge"]
   gpu_node_desired_size = 1
   gpu_node_min_size     = 0
-  gpu_node_max_size     = 5
+  gpu_node_max_size     = 3
   common_tags           = local.common_tags
 }
 
