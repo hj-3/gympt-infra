@@ -33,7 +33,7 @@ locals {
   env          = "dev"
   aws_region   = "ap-northeast-2"
   account_id   = data.aws_caller_identity.current.account_id
-  domain_name  = "gympt.com"
+  domain_name  = "g2mpt.com"
 
   # Naming convention
   name_prefix        = "${local.project_name}-${local.env}"
