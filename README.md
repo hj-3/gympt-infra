@@ -108,6 +108,10 @@ GYMPT 플랫폼의 전체 AWS 인프라를 Terraform으로 관리합니다.
 ### AI/ML
 - bedrock - AI 모델 접근
 
+### 스트리밍
+- kvs - Kinesis Video Streams (WebRTC)
+  - **수동 생성 필요**: WebRTC Signaling Channel은 AWS CLI로 생성 (상세: [docs/KVS_SETUP.md](docs/KVS_SETUP.md))
+
 ## 🔒 보안
 
 - IRSA (IAM Roles for Service Accounts)
@@ -141,4 +145,8 @@ GYMPT 플랫폼의 전체 AWS 인프라를 Terraform으로 관리합니다.
 ---
 
 **상태**: Production Ready ✅  
-**마지막 업데이트**: 2026-05-19
+**마지막 업데이트**: 2026-05-25
+
+## 📚 추가 문서
+
+- [KVS WebRTC 설정 가이드](docs/KVS_SETUP.md) - Kinesis Video Streams 초기 설정
