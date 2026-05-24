@@ -230,6 +230,66 @@ resource "aws_eks_node_group" "general" {
 }
 
 # GPU Node Group (Optional)
+# Launch template for GPU nodes with GPU-optimized AMI
+data "aws_ami" "eks_gpu_optimized" {
+  count = var.enable_gpu_node_group ? 1 : 0
+
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["amazon-eks-gpu-node-1.32-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "state"
+    values = ["available"]
+  }
+}
+
+resource "aws_launch_template" "gpu" {
+  count = var.enable_gpu_node_group ? 1 : 0
+
+  name_prefix = "${local.name_prefix}-gpu-"
+  description = "Launch template for EKS GPU nodes with NVIDIA drivers"
+
+  image_id = data.aws_ami.eks_gpu_optimized[0].id
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+    ebs {
+      volume_size           = 100
+      volume_type           = "gp3"
+      delete_on_termination = true
+      encrypted             = true
+    }
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+  }
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(
+      var.common_tags,
+      {
+        Name = "${local.name_prefix}-gpu-node"
+      }
+    )
+  }
+
+  tags = var.common_tags
+}
+
 resource "aws_eks_node_group" "gpu" {
   count = var.enable_gpu_node_group ? 1 : 0
 
@@ -237,7 +297,7 @@ resource "aws_eks_node_group" "gpu" {
   node_group_name = "${local.name_prefix}-gpu"
   node_role_arn   = aws_iam_role.node.arn
   subnet_ids      = var.private_subnet_ids
-  version         = var.cluster_version
+  version         = "1.32"  # Use 1.32 to match available GPU AMI
 
   scaling_config {
     desired_size = var.gpu_node_desired_size
@@ -249,9 +309,13 @@ resource "aws_eks_node_group" "gpu" {
     max_unavailable = 1
   }
 
+  launch_template {
+    id      = aws_launch_template.gpu[0].id
+    version = "$Latest"
+  }
+
   instance_types = var.gpu_node_instance_types
   capacity_type  = "ON_DEMAND"
-  disk_size      = 100
 
   labels = {
     gpu                               = "true"
