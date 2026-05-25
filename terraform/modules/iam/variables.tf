@@ -60,3 +60,15 @@ variable "common_tags" {
   type    = map(string)
   default = {}
 }
+
+variable "aws_region" {
+  type        = string
+  description = "AWS region for resources"
+  default     = "ap-northeast-2"
+}
+
+variable "bedrock_region" {
+  type        = string
+  description = "AWS region for Bedrock service"
+  default     = "us-west-2"
+}
