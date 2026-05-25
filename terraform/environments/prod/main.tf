@@ -95,6 +95,18 @@ module "eks" {
   common_tags           = local.common_tags
 }
 
+# Data source for EKS additional security groups
+data "aws_security_groups" "eks_additional" {
+  filter {
+    name   = "group-name"
+    values = ["eks-cluster-sg-${module.eks.cluster_name}-*"]
+  }
+  filter {
+    name   = "vpc-id"
+    values = [module.vpc.vpc_id]
+  }
+}
+
 module "rds" {
   source = "../../modules/rds"
 
@@ -102,10 +114,13 @@ module "rds" {
   env                       = local.env
   vpc_id                    = module.vpc.vpc_id
   db_subnet_ids             = module.vpc.private_db_subnet_ids
-  allowed_security_group_ids = [
-    module.eks.node_security_group_id,
-    module.eks.cluster_security_group_id
-  ]
+  allowed_security_group_ids = concat(
+    [
+      module.eks.node_security_group_id,
+      module.eks.cluster_security_group_id
+    ],
+    data.aws_security_groups.eks_additional.ids
+  )
   instance_class            = "db.t3.large"
   allocated_storage         = 100
   engine_version            = "17.2"
@@ -133,10 +148,13 @@ module "elasticache" {
   env                       = local.env
   vpc_id                    = module.vpc.vpc_id
   cache_subnet_ids          = module.vpc.private_app_subnet_ids
-  allowed_security_group_ids = [
-    module.eks.node_security_group_id,
-    module.eks.cluster_security_group_id
-  ]
+  allowed_security_group_ids = concat(
+    [
+      module.eks.node_security_group_id,
+      module.eks.cluster_security_group_id
+    ],
+    data.aws_security_groups.eks_additional.ids
+  )
   node_type                 = "cache.t3.medium"
   num_cache_nodes           = 2
   engine_version            = "7.0"
