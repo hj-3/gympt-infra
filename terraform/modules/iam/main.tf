@@ -87,7 +87,8 @@ resource "aws_iam_policy" "pod_bedrock_access" {
           "bedrock:InvokeModelWithResponseStream"
         ]
         Resource = [
-          "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-*"
+          "arn:aws:bedrock:us-west-2::foundation-model/anthropic.claude-*",
+          "arn:aws:bedrock:us-west-2:337112169365:inference-profile/*"
         ]
       },
       {
