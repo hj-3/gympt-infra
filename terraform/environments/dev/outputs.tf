@@ -57,3 +57,8 @@ output "sqs_queue_urls" {
   description = "SQS queue URLs"
   value       = module.sqs.queue_urls
 }
+
+output "github_actions_app_role_arn" {
+  description = "IAM role ARN for gympt-app GitHub Actions dev deployments"
+  value       = module.github_oidc.github_actions_app_role_arn
+}

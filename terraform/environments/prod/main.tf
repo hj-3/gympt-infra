@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   backend "s3" {
@@ -182,6 +186,22 @@ data "aws_acm_certificate" "existing_cert" {
   statuses    = ["ISSUED"]
   most_recent = true
   provider    = aws.us_east_1
+}
+
+module "github_oidc" {
+  source = "../../modules/github-oidc"
+
+  project_name                 = local.project_name
+  env                          = local.env
+  aws_region                   = local.aws_region
+  github_repository            = "hj-3/gympt-app"
+  allowed_branches             = ["main"]
+  create_oidc_provider         = false
+  ecr_repository_arns          = values(module.ecr.repository_arns)
+  frontend_bucket_arn          = data.aws_s3_bucket.existing_frontend.arn
+  lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
+  cloudfront_distribution_arns = [data.aws_cloudfront_distribution.existing_frontend.arn]
+  common_tags                  = local.common_tags
 }
 
 # S3 버킷 (frontend 제외, 나머지만 생성)

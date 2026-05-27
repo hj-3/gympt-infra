@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   backend "s3" {
@@ -164,6 +168,23 @@ module "cloudfront" {
   web_acl_id                  = module.waf.web_acl_id
   enable_spa_routing          = true
   common_tags                 = local.common_tags
+}
+
+# GitHub Actions OIDC
+module "github_oidc" {
+  source = "../../modules/github-oidc"
+
+  project_name                 = local.project_name
+  env                          = local.env
+  aws_region                   = local.aws_region
+  github_repository            = "hj-3/gympt-app"
+  allowed_branches             = ["develop"]
+  create_oidc_provider         = true
+  ecr_repository_arns          = values(module.ecr.repository_arns)
+  frontend_bucket_arn          = module.s3.frontend_bucket_arn
+  lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
+  cloudfront_distribution_arns = [module.cloudfront.distribution_arn]
+  common_tags                  = local.common_tags
 }
 
 # SQS

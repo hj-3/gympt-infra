@@ -78,3 +78,8 @@ output "kvs_consumer_role_arn" {
   description = "KVS consumer IAM role ARN"
   value       = module.kvs.consumer_role_arn
 }
+
+output "github_actions_app_role_arn" {
+  description = "IAM role ARN for gympt-app GitHub Actions prod deployments"
+  value       = module.github_oidc.github_actions_app_role_arn
+}
