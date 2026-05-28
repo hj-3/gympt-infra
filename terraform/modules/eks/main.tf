@@ -17,14 +17,15 @@ resource "aws_eks_cluster" "main" {
   }
 
   enabled_cluster_log_types = var.enabled_cluster_log_types
-
-  tags = merge(
+ tags = merge(
     var.common_tags,
     {
       Name = "${local.name_prefix}-eks"
     }
   )
-
+ lifecycle {
+    ignore_changes = [bootstrap_self_managed_addons]
+  }
   depends_on = [
     aws_iam_role_policy_attachment.cluster_policy,
     aws_iam_role_policy_attachment.vpc_resource_controller
