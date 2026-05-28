@@ -140,3 +140,9 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "bootstrap_self_managed_addons" {
+  description = "EKS 클러스터 자체 관리 애드온 부트스트랩 여부"
+  type        = bool
+  default     = false
+}

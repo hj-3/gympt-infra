@@ -96,7 +96,9 @@ module "eks" {
   gpu_node_desired_size = 1
   gpu_node_min_size     = 0
   gpu_node_max_size     = 3
+  bootstrap_self_managed_addons = false  # 추가
   common_tags           = local.common_tags
+
 }
 
 # Data source for EKS additional security groups
@@ -196,7 +198,7 @@ module "github_oidc" {
   aws_region                   = local.aws_region
   github_repository            = "hj-3/gympt-app"
   allowed_branches             = ["main"]
-  create_oidc_provider         = false
+  create_oidc_provider         = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = data.aws_s3_bucket.existing_frontend.arn
   lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
