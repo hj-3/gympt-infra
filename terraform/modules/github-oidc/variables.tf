@@ -29,6 +29,12 @@ variable "create_oidc_provider" {
   default     = false
 }
 
+variable "create_app_role" {
+  description = "Whether to create the gympt-app GitHub Actions deployment role"
+  type        = bool
+  default     = true
+}
+
 variable "ecr_repository_arns" {
   description = "ECR repository ARNs that GitHub Actions may push to"
   type        = list(string)
