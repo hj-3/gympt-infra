@@ -276,16 +276,8 @@ module "eventbridge" {
   common_tags                  = local.common_tags
 }
 
-module "waf" {
-  source = "../../modules/waf"
+# WAF 모듈 제거: CloudFront에서 직접 WAF 붙일 예정
 
-  project_name = local.project_name
-  env          = local.env
-  aws_region   = local.aws_region
-  scope        = "REGIONAL"
-  rate_limit   = 5000
-  common_tags  = local.common_tags
-}
 
 module "bedrock" {
   source = "../../modules/bedrock"
