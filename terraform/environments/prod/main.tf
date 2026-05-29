@@ -87,8 +87,8 @@ module "eks" {
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_app_subnet_ids
   cluster_version       = "1.35"
-  enable_public_access  = false
-  public_access_cidrs   = []
+  enable_public_access  = true
+  public_access_cidrs   = ["0.0.0.0/0"] # TODO: restrict to operator IPs after recovery
   node_instance_types   = ["t3.xlarge"]
   node_desired_size     = 3
   node_min_size         = 3
