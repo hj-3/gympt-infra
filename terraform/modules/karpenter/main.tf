@@ -32,23 +32,61 @@ resource "aws_iam_role_policy" "karpenter_controller" {
       {
         Effect = "Allow"
         Action = [
-          "ec2:CreateLaunchTemplate",
+          "ec2:RunInstances",
           "ec2:CreateFleet",
+          "ec2:CreateLaunchTemplate",
+          "ec2:DeleteLaunchTemplate",
           "ec2:DescribeLaunchTemplates",
           "ec2:DescribeInstances",
-          "ec2:DescribeSecurityGroups",
-          "ec2:DescribeSubnets",
           "ec2:DescribeInstanceTypes",
           "ec2:DescribeInstanceTypeOfferings",
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeSubnets",
           "ec2:DescribeAvailabilityZones",
-          "ec2:DeleteLaunchTemplate",
+          "ec2:DescribeImages",
+          "ec2:DescribeSpotPriceHistory",
           "ec2:CreateTags",
           "ec2:TerminateInstances",
-          "pricing:GetProducts",
-          "eks:DescribeCluster",
-          "iam:PassRole",
-          "ssm:GetParameter"
+          "ec2:DeleteVolume"
         ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole",
+          "iam:GetInstanceProfile",
+          "iam:CreateInstanceProfile",
+          "iam:TagInstanceProfile",
+          "iam:AddRoleToInstanceProfile",
+          "iam:RemoveRoleFromInstanceProfile",
+          "iam:DeleteInstanceProfile"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "sqs:DeleteMessage",
+          "sqs:GetQueueUrl",
+          "sqs:ReceiveMessage",
+          "sqs:GetQueueAttributes"
+        ]
+        Resource = "arn:aws:sqs:*:*:${local.name_prefix}-*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["eks:DescribeCluster"]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter"]
+        Resource = "arn:aws:ssm:*:*:parameter/aws/service/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["pricing:GetProducts"]
         Resource = "*"
       }
     ]
