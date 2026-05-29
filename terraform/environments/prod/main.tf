@@ -87,6 +87,8 @@ module "eks" {
   vpc_id                = module.vpc.vpc_id
   private_subnet_ids    = module.vpc.private_app_subnet_ids
   cluster_version       = "1.35"
+  enable_public_access  = false
+  public_access_cidrs   = []
   node_instance_types   = ["t3.xlarge"]
   node_desired_size     = 3
   node_min_size         = 3
@@ -199,7 +201,6 @@ module "github_oidc" {
   github_repository            = "hj-3/gympt-app"
   allowed_branches             = ["main"]
   create_oidc_provider         = true
-  create_oidc_provider         = false
   create_app_role              = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = data.aws_s3_bucket.existing_frontend.arn

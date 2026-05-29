@@ -84,6 +84,8 @@ module "eks" {
   vpc_id                 = module.vpc.vpc_id
   private_subnet_ids     = module.vpc.private_app_subnet_ids
   cluster_version        = "1.35"
+  # TODO: Restrict to office/VPN CIDR before going to prod. e.g. ["203.0.113.0/32"]
+  public_access_cidrs    = ["0.0.0.0/0"]
   node_instance_types    = ["t3.large"]
   node_desired_size      = 2
   node_min_size          = 2
@@ -110,7 +112,7 @@ module "rds" {
   engine_version            = "17.2"
   database_name             = "gympt"
   master_username           = "gymptadmin"
-  master_password           = "changeme123"
+  master_password           = var.rds_master_password
   backup_retention_period   = 7
   multi_az                  = false
   skip_final_snapshot       = true
@@ -165,7 +167,6 @@ module "cloudfront" {
   frontend_bucket_arn         = module.s3.frontend_bucket_arn
   frontend_bucket_domain_name = module.s3.frontend_bucket_domain_name
   price_class                 = "PriceClass_100"
-  web_acl_id                  = module.waf.web_acl_id
   enable_spa_routing          = true
   common_tags                 = local.common_tags
 }
@@ -241,15 +242,6 @@ module "eventbridge" {
   recommendation_lambda_name   = module.lambda.lambda_function_names["recommendation-update"]
   archive_retention_days       = 30
   common_tags                  = local.common_tags
-}
-
-# WAF
-module "waf" {
-  source = "../../modules/waf"
-
-  project_name = local.project_name
-  env          = local.env
-  common_tags  = local.common_tags
 }
 
 # IAM
