@@ -199,6 +199,8 @@ module "github_oidc" {
   github_repository            = "hj-3/gympt-app"
   allowed_branches             = ["main"]
   create_oidc_provider         = true
+  create_oidc_provider         = false
+  create_app_role              = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = data.aws_s3_bucket.existing_frontend.arn
   lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
