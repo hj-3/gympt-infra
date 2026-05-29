@@ -371,6 +371,22 @@ module "monitoring" {
   common_tags      = local.common_tags
 }
 
+# Boundary
+module "boundary" {
+  source = "../../modules/boundary"
+
+  project_name     = local.project_name
+  env              = local.env
+  aws_region       = local.aws_region
+  vpc_id           = module.vpc.vpc_id
+  public_subnet_id = module.vpc.public_subnet_ids[0]
+  instance_type    = "t3.medium"
+  db_password      = var.boundary_db_password
+  # TODO: restrict to operator/VPN CIDRs
+  allowed_cidr_blocks = ["0.0.0.0/0"]
+  common_tags      = local.common_tags
+}
+
 resource "aws_iam_role_policy" "external_secrets_secretsmanager_read" {
   name = "${local.name_prefix}-external-secrets-secretsmanager-read"
   role = "${local.name_prefix}-external-secrets"

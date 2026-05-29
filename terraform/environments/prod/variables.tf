@@ -15,3 +15,9 @@ variable "alarm_email" {
   type        = string
   default     = null
 }
+
+variable "boundary_db_password" {
+  description = "PostgreSQL password for Boundary database user. Pass via TF_VAR_boundary_db_password."
+  type        = string
+  sensitive   = true
+}

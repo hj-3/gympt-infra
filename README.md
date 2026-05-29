@@ -14,9 +14,10 @@ GYMPT 플랫폼의 전체 AWS 인프라를 Terraform으로 관리합니다.
 - 📨 메시징 (SQS, EventBridge)
 - 🎬 스트리밍 (Kinesis Video Streams)
 - 📊 모니터링 (CloudWatch, Athena)
-- 🛡️ 보안 (IAM, WAF, Secrets Manager)
+- 🛡️ 보안 (IAM, Secrets Manager, HashiCorp Boundary)
+- 🔐 접근 제어 (HashiCorp Boundary — Zero-Trust Bastion)
 
-### Terraform 모듈 (25개)
+### Terraform 모듈 (26개)
 모든 인프라 컴포넌트는 재사용 가능한 모듈로 구성되어 있습니다.
 
 ## 🏗️ 아키텍처
@@ -150,3 +151,43 @@ GYMPT 플랫폼의 전체 AWS 인프라를 Terraform으로 관리합니다.
 ## 📚 추가 문서
 
 - [KVS WebRTC 설정 가이드](docs/KVS_SETUP.md) - Kinesis Video Streams 초기 설정
+- [HashiCorp Boundary 설정 가이드](docs/Boundary가이드.md) - Zero-Trust Bastion 설정 및 운영
+
+---
+
+## 🔄 변경 이력
+
+### 2026-05-29
+
+#### 신규 모듈
+
+| 모듈 | 위치 | 설명 |
+|------|------|------|
+| `boundary` | `terraform/modules/boundary` | HashiCorp Boundary + PostgreSQL EC2 인스턴스. Zero-Trust Bastion으로 EKS/RDS 접근을 제어한다. KMS 3개(root/worker-auth/recovery), IAM Role(SSM+KMS), Security Group 포함. |
+
+#### 보안 개선
+
+| 항목 | 변경 전 | 변경 후 | 이유 |
+|------|---------|---------|------|
+| WAF 모듈 제거 | `terraform/modules/waf` 존재, Regional WAF | 모듈 삭제 — CloudFront 레벨에서 WAF 직접 연결 예정 | CloudFront WAF(CLOUDFRONT scope)로 통합하여 중복 제거 |
+| dev RDS 패스워드 | `master_password = "changeme123"` 하드코딩 | `var.rds_master_password` 변수 참조 | 소스코드 자격증명 노출 방지 |
+| EKS API 공개 접근 | `public_access_cidrs` 기본값 `0.0.0.0/0` | 모듈 기본값 제거 — 환경별 명시 강제 | 미설정 시 전세계 노출 방지 |
+| IAM Secrets Manager 경로 | `gympt-prod/*` (대시) | `gympt/prod/*` (슬래시) | External Secrets 실제 경로(`gympt/prod/database` 등)와 일치시킴 |
+| IAM SSM Parameter 경로 | `gympt-prod/*` (대시) | `gympt/prod/*` (슬래시) | 동일 — 경로 불일치로 External Secrets 권한 거부 버그 수정 |
+
+#### GitHub Actions OIDC 개선
+
+| 환경 | 변경 내용 |
+|------|----------|
+| dev | `allowed_branches`에 `"dev"` 추가 (기존: `["develop"]` → `["dev", "develop"]`). `create_app_role = true` 명시. |
+| prod | `create_app_role = true` 명시. |
+
+#### prod EKS 퍼블릭 접근 임시 활성화
+
+```hcl
+# terraform/environments/prod/main.tf
+enable_public_access = true
+public_access_cidrs  = ["0.0.0.0/0"]  # TODO: restrict to operator IPs after recovery
+```
+
+> VPN/Bastion 구성 완료 후 `enable_public_access = false` 또는 특정 IP로 제한 예정.
