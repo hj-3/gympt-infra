@@ -31,9 +31,8 @@ variable "enable_public_access" {
 }
 
 variable "public_access_cidrs" {
-  description = "CIDR blocks allowed to access public endpoint"
+  description = "CIDR blocks allowed to access public endpoint. Must be set explicitly — do not use 0.0.0.0/0 in production."
   type        = list(string)
-  default     = ["0.0.0.0/0"]
 }
 
 variable "enabled_cluster_log_types" {
