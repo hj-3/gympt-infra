@@ -272,7 +272,7 @@ resource "aws_iam_role_policy" "external_secrets" {
           "secretsmanager:DescribeSecret",
           "secretsmanager:ListSecrets"
         ]
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:${local.name_prefix}/*"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:${var.project_name}/${var.env}/*"
       },
       {
         Effect = "Allow"
@@ -281,7 +281,7 @@ resource "aws_iam_role_policy" "external_secrets" {
           "ssm:GetParameters",
           "ssm:GetParametersByPath"
         ]
-        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${local.name_prefix}/*"
+        Resource = "arn:aws:ssm:${var.aws_region}:*:parameter/${var.project_name}/${var.env}/*"
       }
     ]
   })
