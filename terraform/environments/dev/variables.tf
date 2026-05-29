@@ -31,6 +31,12 @@ variable "eks_cluster_version" {
 }
 
 # RDS
+variable "rds_master_password" {
+  description = "RDS master password. Pass via TF_VAR_rds_master_password env var or terraform.tfvars (gitignored)."
+  type        = string
+  sensitive   = true
+}
+
 variable "rds_instance_class" {
   description = "RDS instance class"
   type        = string
