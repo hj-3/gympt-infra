@@ -1,4 +1,6 @@
-data "aws_caller_identity" "current" {}
+data "aws_caller_identity" "current" {
+  count = var.create_app_role ? 1 : 0
+}
 
 data "tls_certificate" "github_actions" {
   count = var.create_oidc_provider ? 1 : 0
@@ -24,6 +26,7 @@ data "aws_iam_openid_connect_provider" "github_actions" {
 
 locals {
   oidc_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github_actions[0].arn : data.aws_iam_openid_connect_provider.github_actions[0].arn
+  account_id        = var.create_app_role ? data.aws_caller_identity.current[0].account_id : null
 
   github_subjects = [
     for branch in var.allowed_branches :
@@ -46,12 +49,14 @@ locals {
 
   cloudfront_distribution_resources = length(var.cloudfront_distribution_arns) > 0 ? var.cloudfront_distribution_arns : ["*"]
 
-  lambda_function_resources = [
-    "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-${var.env}-*"
-  ]
+  lambda_function_resources = var.create_app_role ? [
+    "arn:aws:lambda:${var.aws_region}:${local.account_id}:function:${var.project_name}-${var.env}-*"
+  ] : []
 }
 
 resource "aws_iam_role" "github_actions_app" {
+  count = var.create_app_role ? 1 : 0
+
   name = "github-actions-app-${var.env}-role"
 
   assume_role_policy = jsonencode({
@@ -79,6 +84,8 @@ resource "aws_iam_role" "github_actions_app" {
 }
 
 resource "aws_iam_policy" "github_actions_app" {
+  count = var.create_app_role ? 1 : 0
+
   name        = "github-actions-app-${var.env}-policy"
   description = "Permissions for gympt-app GitHub Actions ${var.env} deployments"
 
@@ -158,6 +165,8 @@ resource "aws_iam_policy" "github_actions_app" {
 }
 
 resource "aws_iam_role_policy_attachment" "github_actions_app" {
-  role       = aws_iam_role.github_actions_app.name
-  policy_arn = aws_iam_policy.github_actions_app.arn
+  count = var.create_app_role ? 1 : 0
+
+  role       = aws_iam_role.github_actions_app[0].name
+  policy_arn = aws_iam_policy.github_actions_app[0].arn
 }

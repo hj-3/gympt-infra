@@ -201,6 +201,7 @@ module "github_oidc" {
   github_repository            = "hj-3/gympt-app"
   allowed_branches             = ["main"]
   create_oidc_provider         = true
+  create_app_role              = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = data.aws_s3_bucket.existing_frontend.arn
   lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
@@ -368,6 +369,27 @@ module "monitoring" {
   memory_threshold = 85
   sqs_age_threshold = 300
   common_tags      = local.common_tags
+}
+
+resource "aws_iam_role_policy" "external_secrets_secretsmanager_read" {
+  name = "${local.name_prefix}-external-secrets-secretsmanager-read"
+  role = "${local.name_prefix}-external-secrets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret:gympt/${local.env}/*"
+        ]
+      }
+    ]
+  })
 }
 
 module "kvs" {

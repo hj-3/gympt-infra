@@ -179,8 +179,9 @@ module "github_oidc" {
   env                          = local.env
   aws_region                   = local.aws_region
   github_repository            = "hj-3/gympt-app"
-  allowed_branches             = ["develop"]
+  allowed_branches             = ["dev", "develop"]
   create_oidc_provider         = false
+  create_app_role              = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = module.s3.frontend_bucket_arn
   lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
