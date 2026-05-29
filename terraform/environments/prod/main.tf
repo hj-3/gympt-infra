@@ -375,6 +375,27 @@ module "monitoring" {
   common_tags      = local.common_tags
 }
 
+resource "aws_iam_role_policy" "external_secrets_secretsmanager_read" {
+  name = "${local.name_prefix}-external-secrets-secretsmanager-read"
+  role = "${local.name_prefix}-external-secrets"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret:gympt/${local.env}/*"
+        ]
+      }
+    ]
+  })
+}
+
 module "kvs" {
   source = "../../modules/kvs"
 

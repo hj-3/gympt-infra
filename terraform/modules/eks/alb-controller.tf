@@ -224,16 +224,6 @@ data "aws_iam_policy_document" "alb_controller" {
       "arn:aws:elasticloadbalancing:*:*:loadbalancer/net/*/*",
       "arn:aws:elasticloadbalancing:*:*:loadbalancer/app/*/*"
     ]
-    condition {
-      test     = "Null"
-      variable = "aws:RequestTag/elbv2.k8s.aws/cluster"
-      values   = ["true"]
-    }
-    condition {
-      test     = "Null"
-      variable = "aws:ResourceTag/elbv2.k8s.aws/cluster"
-      values   = ["false"]
-    }
   }
 
   statement {
