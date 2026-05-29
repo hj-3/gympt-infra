@@ -96,7 +96,9 @@ module "eks" {
   gpu_node_desired_size = 1
   gpu_node_min_size     = 0
   gpu_node_max_size     = 3
+  bootstrap_self_managed_addons = false  # 추가
   common_tags           = local.common_tags
+
 }
 
 # Data source for EKS additional security groups
@@ -196,6 +198,7 @@ module "github_oidc" {
   aws_region                   = local.aws_region
   github_repository            = "hj-3/gympt-app"
   allowed_branches             = ["main"]
+  create_oidc_provider         = true
   create_oidc_provider         = false
   create_app_role              = true
   ecr_repository_arns          = values(module.ecr.repository_arns)
@@ -275,16 +278,8 @@ module "eventbridge" {
   common_tags                  = local.common_tags
 }
 
-module "waf" {
-  source = "../../modules/waf"
+# WAF 모듈 제거: CloudFront에서 직접 WAF 붙일 예정
 
-  project_name = local.project_name
-  env          = local.env
-  aws_region   = local.aws_region
-  scope        = "REGIONAL"
-  rate_limit   = 5000
-  common_tags  = local.common_tags
-}
 
 module "bedrock" {
   source = "../../modules/bedrock"

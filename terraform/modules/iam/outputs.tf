@@ -11,3 +11,7 @@ output "bedrock_agent_role_name" {
   description = "Name of the Bedrock Agent IAM role"
   value       = aws_iam_role.bedrock_agent_role.name
 }
+
+output "external_secrets_role_arn" {
+  value = aws_iam_role.external_secrets.arn
+}
