@@ -28,6 +28,24 @@ GYMPT 플랫폼의 전체 AWS 인프라를 Terraform으로 관리합니다.
 - **확장성**: Auto Scaling, Karpenter
 - **관찰성**: Prometheus, Grafana, CloudWatch
 
+## 🗺️ 전체 배포 순서 (Prod 기준)
+
+3개 레포를 아래 순서대로 진행합니다. 각 레포의 `scripts/README.md`에 세부 명령어가 있습니다.
+
+```
+gympt-infra  → STEP 1~5  : 인프라 프로비저닝 (VPC, EKS, RDS 등)
+gympt-gitops → STEP 6~17 : 플랫폼 설치 + 앱 배포 (ArgoCD, ESO, NetworkPolicy)
+gympt-app    → STEP 18~21: 이미지 빌드 + 최종 검증
+```
+
+| 레포 | 스크립트 가이드 |
+|------|---------------|
+| gympt-infra | [scripts/README.md](scripts/README.md) — STEP 1~5 |
+| gympt-gitops | [scripts/README.md](../gympt-gitops/scripts/README.md) — STEP 6~17 |
+| gympt-app | [scripts/README.md](../gympt-app/scripts/README.md) — STEP 18~21 |
+
+---
+
 ## 🚀 빠른 시작
 
 ### 사전 요구사항
