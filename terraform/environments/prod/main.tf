@@ -282,16 +282,6 @@ module "eventbridge" {
 # WAF 모듈 제거: CloudFront에서 직접 WAF 붙일 예정
 
 
-module "bedrock" {
-  source = "../../modules/bedrock"
-
-  project_name   = local.project_name
-  env            = local.env
-  aws_region     = local.aws_region
-  s3_bucket_arns = [module.s3.media_bucket_arn]
-  common_tags    = local.common_tags
-}
-
 module "iam" {
   source = "../../modules/iam"
 

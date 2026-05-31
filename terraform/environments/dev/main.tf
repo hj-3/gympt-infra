@@ -290,17 +290,6 @@ module "cloudtrail" {
   common_tags    = local.common_tags
 }
 
-# Bedrock
-module "bedrock" {
-  source = "../../modules/bedrock"
-
-  project_name   = local.project_name
-  env            = local.env
-  aws_region     = local.aws_region
-  s3_bucket_arns = [module.s3.media_bucket_arn]
-  common_tags    = local.common_tags
-}
-
 # Athena
 module "athena" {
   source = "../../modules/athena"

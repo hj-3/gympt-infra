@@ -92,7 +92,7 @@ echo ""
 
 # Check EKS Cluster
 echo -e "${BLUE}[2/12] EKS Cluster${NC}"
-CLUSTER_NAME="gympt-${ENV}-cluster"
+CLUSTER_NAME="gympt-${ENV}-eks"
 CLUSTER_STATUS=$(aws eks describe-cluster \
     --region "$REGION" \
     --name "$CLUSTER_NAME" \
@@ -107,7 +107,7 @@ if [ "$CLUSTER_STATUS" != "NOT_FOUND" ]; then
     NODE_COUNT=$(aws eks describe-nodegroup \
         --region "$REGION" \
         --cluster-name "$CLUSTER_NAME" \
-        --nodegroup-name "gympt-${ENV}-workers" \
+        --nodegroup-name "gympt-${ENV}-general" \
         --query "nodegroup.scalingConfig.desiredSize" \
         --output text 2>/dev/null || echo "0")
     echo -e "  Nodes:      ${GREEN}${NODE_COUNT}${NC}"
@@ -345,7 +345,7 @@ echo ""
 
 # Check Cost
 echo -e "${BLUE}[12/12] Estimated Monthly Cost${NC}"
-START_DATE=$(date -d "1 month ago" +%Y-%m-%d)
+START_DATE=$(date -d "1 month ago" +%Y-%m-%d 2>/dev/null || date -v-1m +%Y-%m-%d)
 END_DATE=$(date +%Y-%m-%d)
 
 TOTAL_COST=$(aws ce get-cost-and-usage \
