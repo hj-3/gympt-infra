@@ -2,6 +2,125 @@
 
 Automation scripts for managing GYMPT infrastructure deployment, operations, and maintenance.
 
+---
+
+## Prod 환경 전체 배포 순서
+
+> 처음 구축하거나 전체 재배포할 때의 단계별 실행 순서입니다.
+> 각 단계 완료 확인 후 다음으로 넘어가세요.
+
+### 사전 준비
+
+```bash
+# 필수 도구 설치 확인
+aws --version          # AWS CLI v2 이상
+terraform -version     # 1.7.0 이상
+kubectl version        # 1.30 이상
+helm version           # 3.x
+argocd version         # 2.x (선택)
+
+# AWS 자격증명 설정
+aws configure
+aws sts get-caller-identity  # 확인
+
+# prod 배포에 필요한 시크릿 환경변수 설정
+export TF_VAR_rds_master_password="<RDS 마스터 패스워드>"
+export TF_VAR_redis_auth_token="<Redis 인증 토큰>"
+export TF_VAR_boundary_db_password="<Boundary DB 패스워드>"
+export TF_VAR_alarm_email="<알림 이메일>"
+```
+
+---
+
+### STEP 1 — Terraform 백엔드 초기화
+
+```bash
+cd gympt-infra
+./scripts/init-backend.sh
+```
+S3 state 버킷과 DynamoDB lock 테이블을 생성합니다.
+
+---
+
+### STEP 2 — Terraform 초기화
+
+```bash
+cd terraform/environments/prod
+
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
+terraform init \
+  -backend-config="bucket=gympt-tfstate-${ACCOUNT_ID}" \
+  -backend-config="key=prod/terraform.tfstate" \
+  -backend-config="region=ap-northeast-2" \
+  -backend-config="dynamodb_table=gympt-tfstate-lock"
+```
+
+---
+
+### STEP 3 — 인프라 단계적 Apply
+
+순서가 중요합니다. 의존관계 때문에 반드시 아래 순서로 실행하세요.
+
+```bash
+# 3-1. 네트워크 (VPC, 서브넷, NAT, 엔드포인트)
+terraform apply -target=module.vpc
+
+# 3-2. ECR 레포지토리 (이미지 push 전에 필요)
+terraform apply -target=module.ecr
+
+# 3-3. EKS 클러스터 (15~20분 소요)
+terraform apply -target=module.eks
+
+# 3-4. 데이터 계층 (RDS, DynamoDB, ElastiCache)
+terraform apply \
+  -target=module.rds \
+  -target=module.dynamodb \
+  -target=module.elasticache
+
+# 3-5. 스토리지 및 메시징
+terraform apply \
+  -target=module.s3 \
+  -target=module.sqs \
+  -target=module.eventbridge
+
+# 3-6. IAM, Karpenter, GitHub OIDC
+terraform apply \
+  -target=module.iam \
+  -target=module.karpenter \
+  -target=module.github_oidc
+
+# 3-7. 나머지 전체 (Lambda, CloudWatch, CloudTrail, KVS, Boundary 등)
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+
+---
+
+### STEP 4 — kubeconfig 설정
+
+```bash
+cd gympt-infra
+./scripts/get-kubeconfig.sh prod
+
+# 연결 확인
+kubectl get nodes
+```
+
+---
+
+### STEP 5 — 인프라 상태 확인
+
+```bash
+./scripts/utilities/check-resources.sh prod
+```
+
+EKS, RDS, Redis, S3, SQS 등 전체 상태를 출력합니다.
+
+---
+
+> **다음 단계**: `gympt-gitops/scripts/README.md` — 플랫폼 설치 및 앱 배포
+
 ## Directory Structure
 
 ```

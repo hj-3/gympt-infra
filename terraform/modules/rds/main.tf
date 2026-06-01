@@ -2,6 +2,10 @@ locals {
   name_prefix = "${var.project_name}-${var.env}"
 }
 
+data "aws_vpc" "this" {
+  id = var.vpc_id
+}
+
 # DB Subnet Group
 resource "aws_db_subnet_group" "main" {
   name       = "${local.name_prefix}-db-subnet-group"
@@ -30,11 +34,11 @@ resource "aws_security_group" "rds" {
   }
 
   egress {
-    description = "All traffic"
+    description = "All traffic within VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [data.aws_vpc.this.cidr_block]
   }
 
   tags = merge(

@@ -84,8 +84,7 @@ module "eks" {
   vpc_id                 = module.vpc.vpc_id
   private_subnet_ids     = module.vpc.private_app_subnet_ids
   cluster_version        = "1.35"
-  # TODO: Restrict to office/VPN CIDR before going to prod. e.g. ["203.0.113.0/32"]
-  public_access_cidrs    = ["0.0.0.0/0"]
+  public_access_cidrs    = var.eks_public_access_cidrs
   node_instance_types    = ["t3.large"]
   node_desired_size      = 2
   node_min_size          = 2
@@ -287,17 +286,6 @@ module "cloudtrail" {
   project_name   = local.project_name
   env            = local.env
   s3_bucket_name = module.s3.logs_bucket_id
-  common_tags    = local.common_tags
-}
-
-# Bedrock
-module "bedrock" {
-  source = "../../modules/bedrock"
-
-  project_name   = local.project_name
-  env            = local.env
-  aws_region     = local.aws_region
-  s3_bucket_arns = [module.s3.media_bucket_arn]
   common_tags    = local.common_tags
 }
 

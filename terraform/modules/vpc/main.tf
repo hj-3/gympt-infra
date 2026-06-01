@@ -85,7 +85,7 @@ resource "aws_subnet" "private_app" {
       Name                              = "${local.name_prefix}-private-app-${local.azs[count.index]}"
       "kubernetes.io/role/internal-elb" = "1"
       Type                              = "private-app"
-      "karpenter.sh/discovery"          = local.name_prefix
+      "karpenter.sh/discovery"          = "${local.name_prefix}-eks"
     }
   )
 }

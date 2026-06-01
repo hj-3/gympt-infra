@@ -194,6 +194,29 @@ resource "aws_security_group_rule" "node_egress_all" {
   security_group_id = aws_security_group.node.id
 }
 
+# Karpenter-provisioned nodes use the node SG, but managed nodes use the auto-created
+# EKS cluster SG. These cross-rules allow both sets to communicate (required for
+# pod-to-pod traffic, CoreDNS, etc.).
+resource "aws_security_group_rule" "node_ingress_from_cluster_sg" {
+  description              = "Allow traffic from EKS managed nodes (cluster SG) to Karpenter nodes"
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 0
+  protocol                 = "-1"
+  security_group_id        = aws_security_group.node.id
+  source_security_group_id = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
+resource "aws_security_group_rule" "cluster_sg_ingress_from_node" {
+  description              = "Allow traffic from Karpenter nodes to EKS managed nodes (cluster SG)"
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 0
+  protocol                 = "-1"
+  security_group_id        = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+  source_security_group_id = aws_security_group.node.id
+}
+
 # Managed Node Group - General Purpose
 resource "aws_eks_node_group" "general" {
   cluster_name    = aws_eks_cluster.main.name

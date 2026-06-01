@@ -67,7 +67,7 @@ echo -e "${BLUE}[3/5]${NC} Finding bastion instance..."
 INSTANCE_ID=$(aws ec2 describe-instances \
     --region "${REGION}" \
     --filters \
-        "Name=tag:eks:cluster-name,Values=gympt-${ENV}-cluster" \
+        "Name=tag:eks:cluster-name,Values=gympt-${ENV}-eks" \
         "Name=instance-state-name,Values=running" \
     --query "Reservations[0].Instances[0].InstanceId" \
     --output text)

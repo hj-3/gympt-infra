@@ -30,6 +30,12 @@ variable "eks_cluster_version" {
   default     = "1.29"
 }
 
+variable "eks_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the EKS public API endpoint."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
+}
+
 # RDS
 variable "rds_master_password" {
   description = "RDS master password. Pass via TF_VAR_rds_master_password env var or terraform.tfvars (gitignored)."
