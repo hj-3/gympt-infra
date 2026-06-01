@@ -51,6 +51,12 @@ locals {
   name_prefix = "${local.project_name}-${local.env}"
   s3_suffix   = local.account_id
 
+  frontend_bucket = (
+    var.frontend_s3_bucket_name != "" ?
+    var.frontend_s3_bucket_name :
+    "gympt-fe-deploy-${local.account_id}"
+  )
+
   common_tags = {
     Project     = local.project_name
     Environment = local.env
@@ -88,7 +94,7 @@ module "eks" {
   private_subnet_ids    = module.vpc.private_app_subnet_ids
   cluster_version       = "1.35"
   enable_public_access  = true
-  public_access_cidrs   = ["0.0.0.0/0"] # TODO: restrict to operator IPs after recovery
+  public_access_cidrs   = var.eks_public_access_cidrs
   node_instance_types   = ["t3.xlarge"]
   node_desired_size     = 3
   node_min_size         = 3
@@ -178,11 +184,11 @@ module "elasticache" {
 # Frontend 리소스 (기존 수동 생성 리소스 참조)
 # ============================================
 data "aws_s3_bucket" "existing_frontend" {
-  bucket = "gympt-fe-deploy-337112169365"
+  bucket = local.frontend_bucket
 }
 
 data "aws_cloudfront_distribution" "existing_frontend" {
-  id = "E14Z61F5I2E9ZM"
+  id = var.cloudfront_distribution_id
 }
 
 data "aws_acm_certificate" "existing_cert" {
@@ -372,8 +378,7 @@ module "boundary" {
   public_subnet_id = module.vpc.public_subnet_ids[0]
   instance_type    = "t3.medium"
   db_password      = var.boundary_db_password
-  # TODO: restrict to operator/VPN CIDRs
-  allowed_cidr_blocks = ["0.0.0.0/0"]
+  allowed_cidr_blocks = var.eks_public_access_cidrs
   common_tags      = local.common_tags
 }
 

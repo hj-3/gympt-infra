@@ -88,7 +88,7 @@ resource "aws_iam_policy" "pod_bedrock_access" {
         ]
         Resource = [
           "arn:aws:bedrock:*::foundation-model/anthropic.claude-*",
-          "arn:aws:bedrock:*:337112169365:inference-profile/*"
+          "arn:aws:bedrock:*:${data.aws_caller_identity.current.account_id}:inference-profile/*"
         ]
       },
       {

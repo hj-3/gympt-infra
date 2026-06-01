@@ -6,3 +6,12 @@ redis_auth_token = "CHANGE_ME_STRONG_TOKEN_HERE"
 
 # Email for CloudWatch Alarms (optional)
 alarm_email = "your-email@example.com"
+
+# EKS API 엔드포인트 접근 허용 CIDR (운영자/VPN IP로 제한 권장)
+eks_public_access_cidrs = ["0.0.0.0/0"]
+
+# Boundary DB password
+boundary_db_password = "CHANGE_ME_STRONG_PASSWORD_HERE"
+
+# 기존 수동 생성 CloudFront Distribution ID
+cloudfront_distribution_id = "YOUR_CLOUDFRONT_DISTRIBUTION_ID"
