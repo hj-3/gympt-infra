@@ -220,6 +220,56 @@ resource "aws_vpc_endpoint" "s3" {
   )
 }
 
+resource "aws_vpc_endpoint" "dynamodb" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.dynamodb"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids = concat(
+    [aws_route_table.public.id],
+    aws_route_table.private_app[*].id,
+    aws_route_table.private_db[*].id
+  )
+
+  tags = merge(
+    var.common_tags,
+    {
+      Name = "${local.name_prefix}-dynamodb-endpoint"
+    }
+  )
+}
+
+resource "aws_vpc_endpoint" "secretsmanager" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  
+  tags = merge(
+    var.common_tags,
+    {
+      Name = "${local.name_prefix}-secretsmanager-endpoint"
+    }
+  )
+}
+
+resource "aws_vpc_endpoint" "bedrock_runtime" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.bedrock-runtime"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+  
+  tags = merge(
+    var.common_tags,
+    {
+      Name = "${local.name_prefix}-bedrock-endpoint"
+    }
+  )
+}
+
 resource "aws_vpc_endpoint" "ecr_api" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.api"

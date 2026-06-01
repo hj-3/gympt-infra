@@ -34,7 +34,7 @@ if ! command -v terraform &> /dev/null; then
     exit 1
 fi
 
-TERRAFORM_VERSION=$(terraform version -json | grep -o '"terraform_version":"[^"]*' | cut -d'"' -f4)
+TERRAFORM_VERSION=$(terraform version -json | grep -o '"terraform_version": *"[^"]*' | cut -d'"' -f4)
 echo -e "${YELLOW}Terraform Version:${NC} ${GREEN}${TERRAFORM_VERSION}${NC}"
 echo ""
 
@@ -62,7 +62,7 @@ if [ -d "${TERRAFORM_ROOT}/modules" ]; then
         fi
 
         module_name=$(basename "$module_dir")
-        ((TOTAL_MODULES++))
+        (( ++TOTAL_MODULES ))
 
         echo -ne "  ${YELLOW}${module_name}${NC} ... "
 
@@ -72,7 +72,7 @@ if [ -d "${TERRAFORM_ROOT}/modules" ]; then
         if ! terraform init -backend=false > /tmp/tf-init-${module_name}.log 2>&1; then
             echo -e "${RED}FAILED (init)${NC}"
             echo "    See: /tmp/tf-init-${module_name}.log"
-            ((FAILED_MODULES++))
+            (( ++FAILED_MODULES ))
             continue
         fi
 
@@ -80,12 +80,12 @@ if [ -d "${TERRAFORM_ROOT}/modules" ]; then
         if ! terraform validate > /tmp/tf-validate-${module_name}.log 2>&1; then
             echo -e "${RED}FAILED (validate)${NC}"
             echo "    See: /tmp/tf-validate-${module_name}.log"
-            ((FAILED_MODULES++))
+            (( ++FAILED_MODULES ))
             continue
         fi
 
         echo -e "${GREEN}OK${NC}"
-        ((VALID_MODULES++))
+        (( ++VALID_MODULES ))
     done
 fi
 
@@ -107,7 +107,7 @@ if [ -d "${TERRAFORM_ROOT}/environments" ]; then
         fi
 
         env_name=$(basename "$env_dir")
-        ((TOTAL_ENVS++))
+        (( ++TOTAL_ENVS ))
 
         echo -ne "  ${YELLOW}${env_name}${NC} ... "
 
@@ -116,7 +116,7 @@ if [ -d "${TERRAFORM_ROOT}/environments" ]; then
         # Check for required files
         if [ ! -f "main.tf" ]; then
             echo -e "${RED}FAILED (no main.tf)${NC}"
-            ((FAILED_ENVS++))
+            (( ++FAILED_ENVS ))
             continue
         fi
 
@@ -124,7 +124,7 @@ if [ -d "${TERRAFORM_ROOT}/environments" ]; then
         if ! terraform init -backend=false > /tmp/tf-init-env-${env_name}.log 2>&1; then
             echo -e "${RED}FAILED (init)${NC}"
             echo "    See: /tmp/tf-init-env-${env_name}.log"
-            ((FAILED_ENVS++))
+            (( ++FAILED_ENVS ))
             continue
         fi
 
@@ -132,12 +132,12 @@ if [ -d "${TERRAFORM_ROOT}/environments" ]; then
         if ! terraform validate > /tmp/tf-validate-env-${env_name}.log 2>&1; then
             echo -e "${RED}FAILED (validate)${NC}"
             echo "    See: /tmp/tf-validate-env-${env_name}.log"
-            ((FAILED_ENVS++))
+            (( ++FAILED_ENVS ))
             continue
         fi
 
         echo -e "${GREEN}OK${NC}"
-        ((VALID_ENVS++))
+        (( ++VALID_ENVS ))
     done
 fi
 
