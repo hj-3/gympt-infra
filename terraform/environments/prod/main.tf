@@ -66,6 +66,7 @@ module "vpc" {
   env          = local.env
   aws_region   = local.aws_region
   vpc_cidr     = "10.1.0.0/16"
+  flow_logs_bucket_arn = "arn:aws:s3:::gympt-prod-logs-337112169365"
   common_tags  = local.common_tags
 }
 

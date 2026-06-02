@@ -24,3 +24,9 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "flow_logs_bucket_arn" {
+  description = "S3 bucket ARN for VPC Flow Logs"
+  type        = string
+  default     = ""
+}

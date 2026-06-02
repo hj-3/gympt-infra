@@ -335,3 +335,19 @@ resource "aws_security_group" "vpc_endpoints" {
     create_before_destroy = true
   }
 }
+
+# VPC Flow Logs
+resource "aws_flow_log" "main" {
+  count                = var.flow_logs_bucket_arn != "" ? 1 : 0
+  vpc_id               = aws_vpc.main.id
+  traffic_type         = "ALL"
+  log_destination_type = "s3"
+  log_destination      = "${var.flow_logs_bucket_arn}/vpc-flow-logs/"
+
+  tags = merge(
+    var.common_tags,
+    {
+      Name = "${local.name_prefix}-flow-logs"
+    }
+  )
+}
