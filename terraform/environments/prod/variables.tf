@@ -16,11 +16,11 @@ variable "alarm_email" {
   default     = null
 }
 
-variable "boundary_db_password" {
-  description = "PostgreSQL password for Boundary database user. Pass via TF_VAR_boundary_db_password."
-  type        = string
-  sensitive   = true
-}
+#variable "boundary_db_password" {
+#  description = "PostgreSQL password for Boundary database user. Pass via TF_VAR_boundary_db_password."
+#  type        = string
+#  sensitive   = true
+#}
 
 variable "eks_public_access_cidrs" {
   description = "CIDR blocks allowed to access the EKS public API endpoint. Restrict to office/VPN IPs in production."

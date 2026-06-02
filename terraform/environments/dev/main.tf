@@ -10,6 +10,14 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.27"
+    }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 2.12"
+    }
   }
 
   backend "s3" {
@@ -27,6 +35,45 @@ provider "aws" {
 
   default_tags {
     tags = local.common_tags
+  }
+}
+
+# Kubernetes and Helm providers for managing K8s resources
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = [
+      "eks",
+      "get-token",
+      "--cluster-name",
+      module.eks.cluster_name,
+      "--region",
+      local.aws_region
+    ]
+  }
+}
+
+provider "helm" {
+  kubernetes {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args = [
+        "eks",
+        "get-token",
+        "--cluster-name",
+        module.eks.cluster_name,
+        "--region",
+        local.aws_region
+      ]
+    }
   }
 }
 
@@ -78,23 +125,25 @@ module "ecr" {
 module "eks" {
   source = "../../modules/eks"
 
-  project_name           = local.project_name
-  env                    = local.env
-  aws_region             = local.aws_region
-  vpc_id                 = module.vpc.vpc_id
-  private_subnet_ids     = module.vpc.private_app_subnet_ids
-  cluster_version        = "1.35"
-  public_access_cidrs    = var.eks_public_access_cidrs
-  node_instance_types    = ["t3.large"]
-  node_desired_size      = 2
-  node_min_size          = 2
-  node_max_size          = 10
-  enable_gpu_node_group  = true
-  gpu_instance_types     = ["g4dn.xlarge"]
-  gpu_desired_size       = 0
-  gpu_min_size           = 0
-  gpu_max_size           = 3
-  common_tags            = local.common_tags
+  project_name                  = local.project_name
+  env                           = local.env
+  aws_region                    = local.aws_region
+  vpc_id                        = module.vpc.vpc_id
+  private_subnet_ids            = module.vpc.private_app_subnet_ids
+  cluster_version               = "1.35"
+  public_access_cidrs           = var.eks_public_access_cidrs
+  node_instance_types           = ["t3.large"]
+  node_desired_size             = 2
+  node_min_size                 = 2
+  node_max_size                 = 10
+  enable_gpu_node_group         = true
+  gpu_instance_types            = ["g4dn.xlarge"]
+  gpu_desired_size              = 0
+  gpu_min_size                  = 0
+  gpu_max_size                  = 3
+  karpenter_controller_role_arn = module.karpenter.controller_role_arn
+  karpenter_node_role_name      = "${local.name_prefix}-eks-node-role"
+  common_tags                   = local.common_tags
 }
 
 # RDS

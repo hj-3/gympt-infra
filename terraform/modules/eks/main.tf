@@ -82,7 +82,8 @@ resource "aws_security_group" "cluster" {
   tags = merge(
     var.common_tags,
     {
-      Name = "${local.name_prefix}-eks-cluster-sg"
+      Name                     = "${local.name_prefix}-eks-cluster-sg"
+      "karpenter.sh/discovery" = "${local.name_prefix}-eks"
     }
   )
 

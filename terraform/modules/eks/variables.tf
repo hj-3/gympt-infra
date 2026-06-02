@@ -145,3 +145,18 @@ variable "bootstrap_self_managed_addons" {
   type        = bool
   default     = false
 }
+
+variable "aws_region" {
+  description = "AWS region"
+  type        = string
+}
+
+variable "karpenter_controller_role_arn" {
+  description = "ARN of Karpenter controller IAM role"
+  type        = string
+}
+
+variable "karpenter_node_role_name" {
+  description = "Name of Karpenter node IAM role"
+  type        = string
+}

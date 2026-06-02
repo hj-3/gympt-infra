@@ -1,6 +1,9 @@
 # Archive
 archive/
 
+# Scripts
+scripts/*
+
 # Terraform
 **/.terraform/
 **/.terraform.lock.hcl

@@ -68,12 +68,12 @@ locals {
 module "vpc" {
   source = "../../modules/vpc"
 
-  project_name = local.project_name
-  env          = local.env
-  aws_region   = local.aws_region
-  vpc_cidr     = "10.1.0.0/16"
+  project_name         = local.project_name
+  env                  = local.env
+  aws_region           = local.aws_region
+  vpc_cidr             = "10.1.0.0/16"
   flow_logs_bucket_arn = "arn:aws:s3:::gympt-prod-logs-337112169365"
-  common_tags  = local.common_tags
+  common_tags          = local.common_tags
 }
 
 module "ecr" {
@@ -89,24 +89,24 @@ module "ecr" {
 module "eks" {
   source = "../../modules/eks"
 
-  project_name          = local.project_name
-  env                   = local.env
-  vpc_id                = module.vpc.vpc_id
-  private_subnet_ids    = module.vpc.private_app_subnet_ids
-  cluster_version       = "1.35"
-  enable_public_access  = true
-  public_access_cidrs   = var.eks_public_access_cidrs
-  node_instance_types   = ["t3.xlarge"]
-  node_desired_size     = 3
-  node_min_size         = 3
-  node_max_size         = 20
-  enable_gpu_node_group = true
-  gpu_node_instance_types = ["g4dn.xlarge"]
-  gpu_node_desired_size = 1
-  gpu_node_min_size     = 0
-  gpu_node_max_size     = 3
-  bootstrap_self_managed_addons = false  # 추가
-  common_tags           = local.common_tags
+  project_name                  = local.project_name
+  env                           = local.env
+  vpc_id                        = module.vpc.vpc_id
+  private_subnet_ids            = module.vpc.private_app_subnet_ids
+  cluster_version               = "1.35"
+  enable_public_access          = true
+  public_access_cidrs           = var.eks_public_access_cidrs
+  node_instance_types           = ["t3.xlarge"]
+  node_desired_size             = 3
+  node_min_size                 = 3
+  node_max_size                 = 20
+  enable_gpu_node_group         = true
+  gpu_node_instance_types       = ["g4dn.xlarge"]
+  gpu_node_desired_size         = 1
+  gpu_node_min_size             = 0
+  gpu_node_max_size             = 3
+  bootstrap_self_managed_addons = false # 추가
+  common_tags                   = local.common_tags
 
 }
 
@@ -125,10 +125,10 @@ data "aws_security_groups" "eks_additional" {
 module "rds" {
   source = "../../modules/rds"
 
-  project_name              = local.project_name
-  env                       = local.env
-  vpc_id                    = module.vpc.vpc_id
-  db_subnet_ids             = module.vpc.private_db_subnet_ids
+  project_name  = local.project_name
+  env           = local.env
+  vpc_id        = module.vpc.vpc_id
+  db_subnet_ids = module.vpc.private_db_subnet_ids
   allowed_security_group_ids = concat(
     [
       module.eks.node_security_group_id,
@@ -136,16 +136,16 @@ module "rds" {
     ],
     data.aws_security_groups.eks_additional.ids
   )
-  instance_class            = "db.t3.large"
-  allocated_storage         = 100
-  engine_version            = "17.2"
-  database_name             = "gympt"
-  master_username           = "gymptadmin"
-  master_password           = var.rds_master_password
-  multi_az                  = true
-  backup_retention_period   = 30
-  deletion_protection       = true
-  common_tags               = local.common_tags
+  instance_class          = "db.t3.large"
+  allocated_storage       = 100
+  engine_version          = "17.2"
+  database_name           = "gympt"
+  master_username         = "gymptadmin"
+  master_password         = var.rds_master_password
+  multi_az                = true
+  backup_retention_period = 30
+  deletion_protection     = true
+  common_tags             = local.common_tags
 }
 
 module "dynamodb" {
@@ -159,10 +159,10 @@ module "dynamodb" {
 module "elasticache" {
   source = "../../modules/elasticache"
 
-  project_name              = local.project_name
-  env                       = local.env
-  vpc_id                    = module.vpc.vpc_id
-  cache_subnet_ids          = module.vpc.private_app_subnet_ids
+  project_name     = local.project_name
+  env              = local.env
+  vpc_id           = module.vpc.vpc_id
+  cache_subnet_ids = module.vpc.private_app_subnet_ids
   allowed_security_group_ids = concat(
     [
       module.eks.node_security_group_id,
@@ -170,15 +170,15 @@ module "elasticache" {
     ],
     data.aws_security_groups.eks_additional.ids
   )
-  node_type                 = "cache.t3.medium"
-  num_cache_nodes           = 2
-  engine_version            = "7.0"
-  auth_token_enabled        = true
-  auth_token                = var.redis_auth_token
+  node_type                  = "cache.t3.medium"
+  num_cache_nodes            = 2
+  engine_version             = "7.0"
+  auth_token_enabled         = true
+  auth_token                 = var.redis_auth_token
   automatic_failover_enabled = true
-  multi_az_enabled          = true
-  snapshot_retention_limit  = 7
-  common_tags               = local.common_tags
+  multi_az_enabled           = true
+  snapshot_retention_limit   = 7
+  common_tags                = local.common_tags
 }
 
 # ============================================
@@ -220,11 +220,11 @@ module "github_oidc" {
 module "s3" {
   source = "../../modules/s3"
 
-  project_name       = local.project_name
-  env                = local.env
-  account_id         = local.account_id
-  create_frontend    = false  # Frontend 버킷은 이미 존재
-  common_tags        = local.common_tags
+  project_name    = local.project_name
+  env             = local.env
+  account_id      = local.account_id
+  create_frontend = false # Frontend 버킷은 이미 존재
+  common_tags     = local.common_tags
 }
 
 # CloudFront는 기존 것 사용 (모듈 비활성화)
@@ -242,21 +242,21 @@ module "sqs" {
 module "lambda" {
   source = "../../modules/lambda"
 
-  project_name            = local.project_name
-  env                     = local.env
-  aws_region              = local.aws_region
-  lambda_artifact_bucket  = module.s3.lambda_artifacts_bucket_id
-  dynamodb_table_arns     = values(module.dynamodb.table_arns)
-  s3_bucket_arns          = values(module.s3.bucket_arns)
-  sqs_queue_arns          = values(module.sqs.queue_arns)
-  secrets_manager_arns    = []
-  vpc_config_enabled      = true
-  vpc_subnet_ids          = module.vpc.private_app_subnet_ids
-  vpc_security_group_ids  = [module.eks.node_security_group_id]
-  xray_tracing_enabled    = true
-  log_retention_days      = 30
-  alarm_actions           = []  # CloudWatch SNS topic will be added after module is created
-  common_tags             = local.common_tags
+  project_name           = local.project_name
+  env                    = local.env
+  aws_region             = local.aws_region
+  lambda_artifact_bucket = module.s3.lambda_artifacts_bucket_id
+  dynamodb_table_arns    = values(module.dynamodb.table_arns)
+  s3_bucket_arns         = values(module.s3.bucket_arns)
+  sqs_queue_arns         = values(module.sqs.queue_arns)
+  secrets_manager_arns   = []
+  vpc_config_enabled     = true
+  vpc_subnet_ids         = module.vpc.private_app_subnet_ids
+  vpc_security_group_ids = [module.eks.node_security_group_id]
+  xray_tracing_enabled   = true
+  log_retention_days     = 30
+  alarm_actions          = [] # CloudWatch SNS topic will be added after module is created
+  common_tags            = local.common_tags
 
   sqs_event_sources = {
     report-generator        = { queue_arn = module.sqs.queue_arns["report-generation"], batch_size = 1, max_concurrency = 10 }
@@ -328,11 +328,11 @@ module "cloudwatch" {
 module "cloudtrail" {
   source = "../../modules/cloudtrail"
 
-  project_name         = local.project_name
-  env                  = local.env
-  s3_bucket_name       = module.s3.logs_bucket_id
-  s3_bucket_policy_id  = module.s3.logs_bucket_policy_id
-  common_tags          = local.common_tags
+  project_name        = local.project_name
+  env                 = local.env
+  s3_bucket_name      = module.s3.logs_bucket_id
+  s3_bucket_policy_id = module.s3.logs_bucket_policy_id
+  common_tags         = local.common_tags
 }
 
 module "athena" {
@@ -356,53 +356,53 @@ module "glue" {
 module "monitoring" {
   source = "../../modules/monitoring"
 
-  project_name     = local.project_name
-  env              = local.env
-  aws_region       = local.aws_region
-  eks_cluster_name = module.eks.cluster_name
-  sqs_queue_names  = module.sqs.queue_names
-  sns_topic_arn    = module.cloudwatch.sns_topic_arn
-  cpu_threshold    = 80
-  memory_threshold = 85
+  project_name      = local.project_name
+  env               = local.env
+  aws_region        = local.aws_region
+  eks_cluster_name  = module.eks.cluster_name
+  sqs_queue_names   = module.sqs.queue_names
+  sns_topic_arn     = module.cloudwatch.sns_topic_arn
+  cpu_threshold     = 80
+  memory_threshold  = 85
   sqs_age_threshold = 300
-  common_tags      = local.common_tags
+  common_tags       = local.common_tags
 }
 
 # Boundary
-module "boundary" {
-  source = "../../modules/boundary"
+#module "boundary" {
+#  source = "../../modules/boundary"
 
-  project_name     = local.project_name
-  env              = local.env
-  aws_region       = local.aws_region
-  vpc_id           = module.vpc.vpc_id
-  public_subnet_id = module.vpc.public_subnet_ids[0]
-  instance_type    = "t3.medium"
-  db_password      = var.boundary_db_password
-  allowed_cidr_blocks = var.eks_public_access_cidrs
-  common_tags      = local.common_tags
-}
+#  project_name     = local.project_name
+#  env              = local.env
+#  aws_region       = local.aws_region
+#  vpc_id           = module.vpc.vpc_id
+# public_subnet_id = module.vpc.public_subnet_ids[0]
+#  instance_type    = "t3.medium"
+#  db_password      = var.boundary_db_password
+#  allowed_cidr_blocks = var.eks_public_access_cidrs
+#  common_tags      = local.common_tags
+#}
 
-resource "aws_iam_role_policy" "external_secrets_secretsmanager_read" {
-  name = "${local.name_prefix}-external-secrets-secretsmanager-read"
-  role = "${local.name_prefix}-external-secrets"
+#resource "aws_iam_role_policy" "external_secrets_secretsmanager_read" {
+#  name = "${local.name_prefix}-external-secrets-secretsmanager-read"
+#  role = "${local.name_prefix}-external-secrets"
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
-        ]
-        Resource = [
-          "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret:gympt/${local.env}/*"
-        ]
-      }
-    ]
-  })
-}
+#  policy = jsonencode({
+#    Version = "2012-10-17"
+#    Statement = [
+#      {
+#        Effect = "Allow"
+#        Action = [
+#          "secretsmanager:GetSecretValue",
+#          "secretsmanager:DescribeSecret"
+#        ]
+#        Resource = [
+#          "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret:gympt/${local.env}/*"
+#        ]
+#      }
+#    ]
+#  })
+#}
 
 module "kvs" {
   source = "../../modules/kvs"

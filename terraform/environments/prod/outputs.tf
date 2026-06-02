@@ -84,17 +84,17 @@ output "github_actions_app_role_arn" {
   value       = module.github_oidc.github_actions_app_role_arn
 }
 
-output "boundary_api_endpoint" {
-  description = "HashiCorp Boundary API / UI endpoint"
-  value       = module.boundary.api_endpoint
-}
+#output "boundary_api_endpoint" {
+#  description = "HashiCorp Boundary API / UI endpoint"
+#  value       = module.boundary.api_endpoint
+#}
 
-output "boundary_instance_id" {
-  description = "Boundary EC2 instance ID"
-  value       = module.boundary.instance_id
-}
+#output "boundary_instance_id" {
+#  description = "Boundary EC2 instance ID"
+#  value       = module.boundary.instance_id
+#}
 
-output "boundary_public_ip" {
-  description = "Boundary EC2 public IP"
-  value       = module.boundary.public_ip
-}
+#output "boundary_public_ip" {
+#  description = "Boundary EC2 public IP"
+#  value       = module.boundary.public_ip
+#}
