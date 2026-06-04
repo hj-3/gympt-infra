@@ -417,22 +417,6 @@ resource "aws_vpc_endpoint" "eks" {
   )
 }
 
-resource "aws_vpc_endpoint" "ssm" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.ssm"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private_app[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-ssm-endpoint"
-    }
-  )
-}
-
 resource "aws_vpc_endpoint" "autoscaling" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.autoscaling"
@@ -448,3 +432,40 @@ resource "aws_vpc_endpoint" "autoscaling" {
     }
   )
 }
+
+# SQS — agent-service, remediation-worker, report-service 등 SQS 큐 사용
+resource "aws_vpc_endpoint" "sqs" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-sqs-endpoint" })
+}
+
+# KMS — EBS/ElastiCache 암호화, Secrets Manager 내부 사용
+resource "aws_vpc_endpoint" "kms" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.kms"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-kms-endpoint" })
+}
+
+# ELB — AWS Load Balancer Controller가 ALB 생성/관리에 사용
+resource "aws_vpc_endpoint" "elasticloadbalancing" {
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.elasticloadbalancing"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private_app[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-elb-endpoint" })
+}
+
