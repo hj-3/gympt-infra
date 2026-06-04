@@ -94,8 +94,8 @@ resource "aws_iam_policy" "pod_bedrock_access" {
       {
         Effect = "Allow"
         Action = [
-          "bedrock-agent-runtime:InvokeAgent",
-          "bedrock-agent-runtime:Retrieve"
+          "bedrock:InvokeAgent",
+          "bedrock:Retrieve"
         ]
         Resource = "*"
       }

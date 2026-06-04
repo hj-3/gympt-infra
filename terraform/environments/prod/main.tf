@@ -302,6 +302,37 @@ module "iam" {
   s3_bucket_arns      = values(module.s3.bucket_arns)
   dynamodb_table_arns = values(module.dynamodb.table_arns)
   common_tags         = local.common_tags
+
+  pod_service_accounts = {
+    backend-api = {
+      namespace       = "gympt-prod"
+      service_account = "backend-api-prod"
+    }
+    agent-service = {
+      namespace       = "gympt-prod"
+      service_account = "agent-service-prod"
+    }
+    posture-analysis-service = {
+      namespace       = "gympt-prod"
+      service_account = "posture-analysis-service-prod"
+    }
+    report-service = {
+      namespace       = "gympt-prod"
+      service_account = "report-service-prod"
+    }
+    remediation-worker = {
+      namespace       = "gympt-prod"
+      service_account = "remediation-worker-prod"
+    }
+    kvs-consumer-service = {
+      namespace       = "gympt-prod"
+      service_account = "kvs-consumer-service-prod"
+    }
+    generic-worker = {
+      namespace       = "gympt-prod"
+      service_account = "generic-worker-prod"
+    }
+  }
 }
 
 module "karpenter" {
