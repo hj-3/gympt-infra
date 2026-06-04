@@ -78,3 +78,18 @@ output "alb_controller_role_name" {
   description = "IAM role name for AWS Load Balancer Controller"
   value       = aws_iam_role.alb_controller.name
 }
+
+output "karpenter_controller_role_arn" {
+  description = "IAM role ARN for Karpenter controller"
+  value       = aws_iam_role.karpenter_controller.arn
+}
+
+output "karpenter_controller_role_name" {
+  description = "IAM role name for Karpenter controller"
+  value       = aws_iam_role.karpenter_controller.name
+}
+
+output "karpenter_node_role_name" {
+  description = "IAM role name for Karpenter nodes (same as EKS node role)"
+  value       = aws_iam_role.node.name
+}

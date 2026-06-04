@@ -179,7 +179,7 @@ resource "helm_release" "karpenter" {
   name       = "karpenter"
   repository = "oci://public.ecr.aws/karpenter"
   chart      = "karpenter"
-  version    = "1.5.0"
+  version    = "1.12.1"
   namespace  = kubernetes_namespace.karpenter.metadata[0].name
 
   set {
@@ -194,7 +194,7 @@ resource "helm_release" "karpenter" {
 
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = var.karpenter_controller_role_arn
+    value = aws_iam_role.karpenter_controller.arn
   }
 
   set {
@@ -245,7 +245,7 @@ resource "kubernetes_manifest" "karpenter_node_class" {
           alias = "al2023@latest"
         }
       ]
-      role = var.karpenter_node_role_name
+      role = aws_iam_role.node.name
       subnetSelectorTerms = [
         {
           tags = {
@@ -284,6 +284,20 @@ resource "kubernetes_manifest" "karpenter_node_class" {
           ManagedBy = "karpenter"
         }
       )
+      userData = <<-EOT
+        MIME-Version: 1.0
+        Content-Type: multipart/mixed; boundary="BOUNDARY"
+
+        --BOUNDARY
+        Content-Type: text/x-shellscript; charset="us-ascii"
+
+        #!/bin/bash
+        /etc/eks/bootstrap.sh '${aws_eks_cluster.main.name}' \
+          --apiserver-endpoint '${aws_eks_cluster.main.endpoint}' \
+          --b64-cluster-ca '${aws_eks_cluster.main.certificate_authority[0].data}'
+
+        --BOUNDARY--
+      EOT
     }
   }
 
