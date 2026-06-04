@@ -91,6 +91,7 @@ module "eks" {
 
   project_name                  = local.project_name
   env                           = local.env
+  aws_region                    = local.aws_region
   vpc_id                        = module.vpc.vpc_id
   private_subnet_ids            = module.vpc.private_app_subnet_ids
   cluster_version               = "1.35"

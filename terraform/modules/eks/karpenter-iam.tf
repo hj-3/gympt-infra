@@ -6,17 +6,17 @@ data "aws_iam_policy_document" "karpenter_controller_assume_role" {
     effect = "Allow"
     principals {
       type        = "Federated"
-      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+      identifiers = [aws_iam_openid_connect_provider.cluster.arn]
     }
     actions = ["sts:AssumeRoleWithWebIdentity"]
     condition {
       test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub"
+      variable = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:sub"
       values   = ["system:serviceaccount:karpenter:karpenter"]
     }
     condition {
       test     = "StringEquals"
-      variable = "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:aud"
+      variable = "${replace(aws_iam_openid_connect_provider.cluster.url, "https://", "")}:aud"
       values   = ["sts.amazonaws.com"]
     }
   }
