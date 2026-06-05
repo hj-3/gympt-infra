@@ -97,13 +97,18 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   bucket = aws_s3_bucket.logs.id
 
   rule {
-    id     = "delete-old-logs"
+    id     = "logs-lifecycle"
     status = "Enabled"
 
     filter {}
 
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+
     expiration {
-      days = 90
+      days = 365
     }
   }
 }
