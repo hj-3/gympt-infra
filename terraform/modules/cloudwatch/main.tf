@@ -81,7 +81,7 @@ resource "aws_chatbot_slack_channel_configuration" "alerts" {
   count              = var.slack_workspace_id != null ? 1 : 0
   configuration_name = "${local.name_prefix}-slack-alerts"
   iam_role_arn       = aws_iam_role.chatbot[0].arn
-  slack_workspace_id = var.slack_workspace_id
+  slack_team_id      = var.slack_workspace_id
   slack_channel_id   = var.slack_channel_id
 
   sns_topic_arns = compact([
