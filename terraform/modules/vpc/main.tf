@@ -351,6 +351,7 @@ resource "aws_flow_log" "main" {
     }
   )
 }
+
 # Additional VPC Endpoints for Karpenter and EKS
 
 resource "aws_vpc_endpoint" "ec2" {

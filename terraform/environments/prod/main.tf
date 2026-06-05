@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    kubernetes = {
+      source  = "hashicorp/kubernetes"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {
@@ -40,6 +44,20 @@ provider "aws" {
   }
 }
 
+provider "kubernetes" {
+  host                   = module.eks.cluster_endpoint
+  cluster_ca_certificate = base64decode(module.eks.cluster_ca_certificate)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args = [
+      "eks", "get-token",
+      "--cluster-name", module.eks.cluster_name,
+      "--region", local.aws_region
+    ]
+  }
+}
+
 data "aws_caller_identity" "current" {}
 
 locals {
@@ -65,6 +83,20 @@ locals {
   }
 }
 
+# S3 버킷 (frontend 제외, 나머지만 생성)
+module "s3" {
+  source = "../../modules/s3"
+
+  project_name    = local.project_name
+  env             = local.env
+  account_id      = local.account_id
+  create_frontend = false # Frontend 버킷은 이미 존재
+  common_tags     = local.common_tags
+}
+
+# CloudFront는 기존 것 사용 (모듈 비활성화)
+# module "cloudfront" 제거
+
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -72,7 +104,7 @@ module "vpc" {
   env                  = local.env
   aws_region           = local.aws_region
   vpc_cidr             = "10.1.0.0/16"
-  flow_logs_bucket_arn = "arn:aws:s3:::gympt-prod-logs-337112169365"
+  flow_logs_bucket_arn = module.s3.logs_bucket_arn
   common_tags          = local.common_tags
 }
 
@@ -216,20 +248,6 @@ module "github_oidc" {
   cloudfront_distribution_arns = [data.aws_cloudfront_distribution.existing_frontend.arn]
   common_tags                  = local.common_tags
 }
-
-# S3 버킷 (frontend 제외, 나머지만 생성)
-module "s3" {
-  source = "../../modules/s3"
-
-  project_name    = local.project_name
-  env             = local.env
-  account_id      = local.account_id
-  create_frontend = false # Frontend 버킷은 이미 존재
-  common_tags     = local.common_tags
-}
-
-# CloudFront는 기존 것 사용 (모듈 비활성화)
-# module "cloudfront" 제거
 
 module "sqs" {
   source = "../../modules/sqs"
@@ -420,4 +438,16 @@ module "kvs" {
   }
 
   tags = local.common_tags
+}
+
+resource "kubernetes_labels" "gympt_prod_psa" {
+  api_version = "v1"
+  kind        = "Namespace"
+  metadata {
+    name = "gympt-prod"
+  }
+  labels = {
+    "pod-security.kubernetes.io/warn"  = "baseline"
+    "pod-security.kubernetes.io/audit" = "baseline"
+  }
 }
