@@ -1,16 +1,16 @@
 output "frontend_bucket_id" {
-  description = "Frontend S3 bucket ID"
-  value       = var.create_frontend ? aws_s3_bucket.frontend[0].id : null
+  description = "Frontend S3 bucket ID (manually managed)"
+  value       = null
 }
 
 output "frontend_bucket_arn" {
-  description = "Frontend S3 bucket ARN"
-  value       = var.create_frontend ? aws_s3_bucket.frontend[0].arn : null
+  description = "Frontend S3 bucket ARN (manually managed)"
+  value       = null
 }
 
 output "frontend_bucket_domain_name" {
-  description = "Frontend S3 bucket regional domain name"
-  value       = var.create_frontend ? aws_s3_bucket.frontend[0].bucket_regional_domain_name : null
+  description = "Frontend S3 bucket domain name (manually managed)"
+  value       = null
 }
 
 output "media_bucket_id" {
