@@ -34,16 +34,6 @@ provider "aws" {
   }
 }
 
-# ACM 인증서는 us-east-1에 있어야 CloudFront에서 사용 가능
-provider "aws" {
-  alias  = "us_east_1"
-  region = "us-east-1"
-
-  default_tags {
-    tags = local.common_tags
-  }
-}
-
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -69,12 +59,6 @@ locals {
   name_prefix = "${local.project_name}-${local.env}"
   s3_suffix   = local.account_id
 
-  frontend_bucket = (
-    var.frontend_s3_bucket_name != "" ?
-    var.frontend_s3_bucket_name :
-    "gympt-fe-deploy-${local.account_id}"
-  )
-
   common_tags = {
     Project     = local.project_name
     Environment = local.env
@@ -83,19 +67,14 @@ locals {
   }
 }
 
-# S3 버킷 (frontend 제외, 나머지만 생성)
 module "s3" {
   source = "../../modules/s3"
 
-  project_name    = local.project_name
-  env             = local.env
-  account_id      = local.account_id
-  create_frontend = false # Frontend 버킷은 이미 존재
-  common_tags     = local.common_tags
+  project_name = local.project_name
+  env          = local.env
+  account_id   = local.account_id
+  common_tags  = local.common_tags
 }
-
-# CloudFront는 기존 것 사용 (모듈 비활성화)
-# module "cloudfront" 제거
 
 module "vpc" {
   source = "../../modules/vpc"
@@ -218,18 +197,11 @@ module "elasticache" {
 # Frontend 리소스 (기존 수동 생성 리소스 참조)
 # ============================================
 data "aws_s3_bucket" "existing_frontend" {
-  bucket = local.frontend_bucket
+  bucket = "gympt-fe-deploy-${local.account_id}"
 }
 
 data "aws_cloudfront_distribution" "existing_frontend" {
   id = var.cloudfront_distribution_id
-}
-
-data "aws_acm_certificate" "existing_cert" {
-  domain      = "g2mpt.com"
-  statuses    = ["ISSUED"]
-  most_recent = true
-  provider    = aws.us_east_1
 }
 
 module "github_oidc" {

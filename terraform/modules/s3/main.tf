@@ -2,50 +2,6 @@ locals {
   name_prefix = "${var.project_name}-${var.env}"
 }
 
-# Frontend Bucket (조건부 생성)
-resource "aws_s3_bucket" "frontend" {
-  count  = var.create_frontend ? 1 : 0
-  bucket = "${local.name_prefix}-frontend-${var.account_id}"
-
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-frontend"
-      Type = "frontend"
-    }
-  )
-}
-
-resource "aws_s3_bucket_versioning" "frontend" {
-  count  = var.create_frontend ? 1 : 0
-  bucket = aws_s3_bucket.frontend[0].id
-
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "frontend" {
-  count  = var.create_frontend ? 1 : 0
-  bucket = aws_s3_bucket.frontend[0].id
-
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_public_access_block" "frontend" {
-  count  = var.create_frontend ? 1 : 0
-  bucket = aws_s3_bucket.frontend[0].id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
 # Media Bucket
 resource "aws_s3_bucket" "media" {
   bucket = "${local.name_prefix}-media-${var.account_id}"
