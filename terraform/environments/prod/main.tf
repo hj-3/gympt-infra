@@ -430,7 +430,8 @@ resource "kubernetes_labels" "gympt_prod_psa" {
 module "inspector" {
   source = "../../modules/inspector"
 
-  project_name = local.project_name
-  env          = local.env
-  common_tags  = local.common_tags
+  project_name    = local.project_name
+  env             = local.env
+  logs_bucket_arn = module.s3.logs_bucket_arn
+  common_tags     = local.common_tags
 }
