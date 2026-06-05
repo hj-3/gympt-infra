@@ -144,6 +144,20 @@ resource "aws_s3_bucket_policy" "logs" {
         Condition = {
           StringEquals = { "aws:SourceAccount" = var.account_id }
         }
+      },
+      # CloudFront Access Logs (V2, CloudWatch Logs vended delivery)
+      {
+        Sid    = "CloudFrontLogsWrite"
+        Effect = "Allow"
+        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/cloudfront-logs/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "aws:SourceAccount" = var.account_id
+          }
+        }
       }
     ]
   })
