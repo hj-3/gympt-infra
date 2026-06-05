@@ -130,8 +130,8 @@ module "eks" {
   enable_public_access          = true
   public_access_cidrs           = var.eks_public_access_cidrs
   node_instance_types           = ["t3.xlarge"]
-  node_desired_size             = 3
-  node_min_size                 = 3
+  node_desired_size             = 2
+  node_min_size                 = 2
   node_max_size                 = 20
   enable_gpu_node_group         = true
   gpu_node_instance_types       = ["g4dn.xlarge"]
