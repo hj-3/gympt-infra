@@ -339,12 +339,15 @@ module "karpenter" {
 module "cloudwatch" {
   source = "../../modules/cloudwatch"
 
-  project_name       = local.project_name
-  env                = local.env
-  aws_region         = local.aws_region
-  alarm_email        = var.alarm_email
-  log_retention_days = 30
-  common_tags        = local.common_tags
+  project_name            = local.project_name
+  env                     = local.env
+  aws_region              = local.aws_region
+  alarm_email             = var.alarm_email
+  log_retention_days      = 30
+  slack_workspace_id      = "T0B30UFQ45S"
+  slack_channel_id        = "C0B8L829W92"
+  inspector_sns_topic_arn = module.inspector.sns_topic_arn
+  common_tags             = local.common_tags
 }
 
 module "cloudtrail" {

@@ -24,3 +24,18 @@ variable "common_tags" {
   type    = map(string)
   default = {}
 }
+
+variable "slack_workspace_id" {
+  type    = string
+  default = null
+}
+
+variable "slack_channel_id" {
+  type    = string
+  default = null
+}
+
+variable "inspector_sns_topic_arn" {
+  type    = string
+  default = null
+}
