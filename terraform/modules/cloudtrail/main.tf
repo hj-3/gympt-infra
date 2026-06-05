@@ -5,6 +5,7 @@ locals {
 resource "aws_cloudtrail" "main" {
   name                          = "${local.name_prefix}-trail"
   s3_bucket_name                = var.s3_bucket_name
+  s3_key_prefix                 = "cloudtrail"
   include_global_service_events = true
   is_multi_region_trail         = true
   enable_log_file_validation    = true
