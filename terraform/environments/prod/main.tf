@@ -451,3 +451,11 @@ resource "kubernetes_labels" "gympt_prod_psa" {
     "pod-security.kubernetes.io/audit" = "baseline"
   }
 }
+
+module "inspector" {
+  source = "../../modules/inspector"
+
+  project_name = local.project_name
+  env          = local.env
+  common_tags  = local.common_tags
+}
