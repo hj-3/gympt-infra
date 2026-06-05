@@ -69,60 +69,103 @@ resource "aws_s3_bucket_lifecycle_configuration" "logs" {
   }
 }
 
-# CloudTrail bucket policy
+# Logs bucket policy
 resource "aws_s3_bucket_policy" "logs" {
   bucket = aws_s3_bucket.logs.id
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # CloudTrail
       {
         Sid    = "AWSCloudTrailAclCheck"
         Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
+        Principal = { Service = "cloudtrail.amazonaws.com" }
         Action   = "s3:GetBucketAcl"
         Resource = aws_s3_bucket.logs.arn
       },
       {
         Sid    = "AWSCloudTrailWrite"
         Effect = "Allow"
-        Principal = {
-          Service = "cloudtrail.amazonaws.com"
-        }
+        Principal = { Service = "cloudtrail.amazonaws.com" }
         Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.logs.arn}/cloudtrail/*"
         Condition = {
-          StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
-          }
+          StringEquals = { "s3:x-amz-acl" = "bucket-owner-full-control" }
         }
+      },
+      # VPC Flow Logs
+      {
+        Sid    = "AWSVPCFlowLogsAclCheck"
+        Effect = "Allow"
+        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.logs.arn
       },
       {
         Sid    = "AWSVPCFlowLogsWrite"
         Effect = "Allow"
-        Principal = {
-          Service = "delivery.logs.amazonaws.com"
-        }
+        Principal = { Service = "delivery.logs.amazonaws.com" }
         Action   = "s3:PutObject"
         Resource = "${aws_s3_bucket.logs.arn}/vpc-flow-logs/*"
         Condition = {
-          StringEquals = {
-            "s3:x-amz-acl" = "bucket-owner-full-control"
-          }
+          StringEquals = { "s3:x-amz-acl" = "bucket-owner-full-control" }
         }
       },
+      # ALB Access Logs (ap-northeast-2 ELB service account: 600734575887)
       {
-        Sid    = "AWSVPCFlowLogsAclCheck"
+        Sid    = "ALBAccessLogsWrite"
         Effect = "Allow"
-        Principal = {
-          Service = "delivery.logs.amazonaws.com"
+        Principal = { AWS = "arn:aws:iam::600734575887:root" }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/alb-access-logs/*"
+      },
+      # S3 Server Access Logs
+      {
+        Sid    = "S3AccessLogsWrite"
+        Effect = "Allow"
+        Principal = { Service = "logging.s3.amazonaws.com" }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.logs.arn}/s3-access-logs/*"
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = var.account_id }
         }
-        Action   = "s3:GetBucketAcl"
-        Resource = aws_s3_bucket.logs.arn
+      },
+      # Kinesis Firehose (WAF logs, EKS audit logs, Inspector findings)
+      {
+        Sid    = "FirehoseDeliveryWrite"
+        Effect = "Allow"
+        Principal = { Service = "firehose.amazonaws.com" }
+        Action   = ["s3:PutObject", "s3:PutObjectAcl"]
+        Resource = [
+          "${aws_s3_bucket.logs.arn}/waf-logs/*",
+          "${aws_s3_bucket.logs.arn}/eks-audit-logs/*",
+          "${aws_s3_bucket.logs.arn}/inspector-findings/*",
+        ]
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = var.account_id }
+        }
       }
     ]
   })
+}
+
+# S3 server access logging for other buckets
+resource "aws_s3_bucket_logging" "media" {
+  bucket        = aws_s3_bucket.media.id
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access-logs/media/"
+}
+
+resource "aws_s3_bucket_logging" "lambda_artifacts" {
+  bucket        = aws_s3_bucket.lambda_artifacts.id
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access-logs/lambda-artifacts/"
+}
+
+resource "aws_s3_bucket_logging" "athena_results" {
+  bucket        = aws_s3_bucket.athena_results.id
+  target_bucket = aws_s3_bucket.logs.id
+  target_prefix = "s3-access-logs/athena-results/"
 }
 
 # Lambda Artifacts Bucket
