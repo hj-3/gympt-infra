@@ -312,10 +312,13 @@ module-name/
 **Resources:**
 - Glue catalog database
 - Crawler for logs bucket
+- Glue catalog table: `alb_access_logs`
+- Glue catalog table: `cloudtrail_logs`
+- Glue catalog table: `vpc_flow_logs`
 - IAM role for Glue
 - S3 access policy
 
-**Outputs:** Database name, crawler name
+**Outputs:** Database name, crawler name, Glue role ARN, catalog table names
 
 ### 20. Monitoring Module (`modules/monitoring/`)
 
@@ -458,6 +461,6 @@ cloudwatch → (monitoring, alarms)
 
 ---
 
-**Last Updated:** 2026-05-19  
+**Last Updated:** 2026-06-08  
 **Terraform Version:** >= 1.7.0  
 **AWS Provider:** ~> 5.0

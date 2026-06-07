@@ -408,6 +408,26 @@ terraform output -json > outputs.json
 
 > 참고: Inspector 스캔은 구축 단계에서 finding 폭증으로 일시 비활성화될 수 있습니다. 파이프라인(EventBridge → Firehose → S3)은 유지되며 재활성화 시 자동으로 적재가 재개됩니다.
 
+## Athena / Glue 로그 분석
+
+`modules/glue`는 중앙 로그 버킷의 주요 로그 prefix를 Athena에서 바로 조회할 수 있도록 명시적인 Glue Catalog Table로 관리합니다. 팀원이 각자 `terraform import`로 기존 Glue table을 state에 편입하지 않고, Terraform 코드에서 table을 생성해 state 충돌을 피합니다.
+
+| Glue table | S3 prefix | 용도 |
+|---|---|---|
+| `alb_access_logs` | `alb-access-logs/` | ALB 요청, 상태 코드, latency, user agent 분석 |
+| `cloudtrail_logs` | `cloudtrail/AWSLogs/<account_id>/CloudTrail/` | AWS API 감사 로그 분석 |
+| `vpc_flow_logs` | `vpc-flow-logs/AWSLogs/<account_id>/vpcflowlogs/<region>/` | VPC 네트워크 흐름 분석 |
+
+Athena workgroup은 `modules/athena`에서 생성하며, 쿼리 결과는 `gympt-<env>-athena-results-<account_id>/athena-results/`에 저장됩니다.
+
+검증 쿼리:
+
+```sql
+SELECT * FROM alb_access_logs LIMIT 10;
+SELECT eventtime, eventsource, eventname FROM cloudtrail_logs LIMIT 10;
+SELECT srcaddr, dstaddr, action FROM vpc_flow_logs LIMIT 10;
+```
+
 ## 재해 복구 (Disaster Recovery)
 
 ### 목표
@@ -526,5 +546,5 @@ See `GITHUB-ACTIONS.md` for complete setup.
 
 ---
 
-**Last Updated:** 2024-05-19  
+**Last Updated:** 2026-06-08  
 **Maintained by:** Platform Team
