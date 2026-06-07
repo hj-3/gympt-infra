@@ -461,6 +461,6 @@ cloudwatch → (monitoring, alarms)
 
 ---
 
-**Last Updated:** 2026-06-08  
-**Terraform Version:** >= 1.7.0  
+**Last Updated:** 2026-06-08
+**Terraform Version:** >= 1.7.0
 **AWS Provider:** ~> 5.0

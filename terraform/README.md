@@ -546,5 +546,5 @@ See `GITHUB-ACTIONS.md` for complete setup.
 
 ---
 
-**Last Updated:** 2026-06-08  
+**Last Updated:** 2026-06-08
 **Maintained by:** Platform Team

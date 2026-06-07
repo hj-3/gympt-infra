@@ -33,4 +33,5 @@ cd gympt-infra
 ---
 
 **저장소**: https://github.com/hj-3/gympt-infra
+
 **최종 업데이트**: 2026-06-08
