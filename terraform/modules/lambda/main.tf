@@ -13,6 +13,19 @@ locals {
   }
 }
 
+# KMS key for Lambda environment variable encryption
+resource "aws_kms_key" "lambda_env" {
+  description             = "${local.name_prefix} Lambda environment variable encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+  tags                    = var.common_tags
+}
+
+resource "aws_kms_alias" "lambda_env" {
+  name          = "alias/${local.name_prefix}-lambda-env"
+  target_key_id = aws_kms_key.lambda_env.key_id
+}
+
 # Lambda Execution Role
 resource "aws_iam_role" "lambda" {
   name = "${local.name_prefix}-lambda-execution-role"
@@ -111,6 +124,13 @@ resource "aws_iam_role_policy" "lambda_custom" {
           "cloudwatch:PutMetricData"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "kms:Decrypt"
+        ]
+        Resource = aws_kms_key.lambda_env.arn
       }
     ]
   })
@@ -122,6 +142,7 @@ resource "aws_lambda_function" "functions" {
 
   function_name = "${local.name_prefix}-${each.key}"
   role          = aws_iam_role.lambda.arn
+  kms_key_arn   = aws_kms_key.lambda_env.arn
   handler       = "handler.lambda_handler"
   runtime       = "python3.12"
   timeout       = each.value.timeout

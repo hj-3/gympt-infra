@@ -169,7 +169,8 @@ module-name/
   - notification (256MB, 30s)
   - export (1024MB, 300s)
 - Shared IAM execution role
-- Custom policy (DynamoDB, S3, SQS, Bedrock access)
+- Custom policy (DynamoDB, S3, SQS, Bedrock, KMS Decrypt access)
+- KMS CMK + alias (environment variable encryption, key rotation enabled)
 - SQS event source mappings
 - CloudWatch log groups
 - CloudWatch alarms (errors, duration)
