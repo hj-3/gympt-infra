@@ -397,7 +397,7 @@ terraform output -json > outputs.json
 | VPC Flow Logs (ALL) | `vpc-flow-logs/` | 직접 |
 | ALB Access Logs | `alb-access-logs/` | ALB 속성 (gitops ingress annotation) |
 | CloudFront Access Logs | `cloudfront-logs/` | CloudWatch Logs vended delivery (V2) |
-| WAF Logs | `waf-logs/` (CloudFront), `waf-logs/alb/` (ALB) | Kinesis Firehose |
+| WAF Logs | `waf-logs/cloudfront/` (CloudFront), `waf-logs/alb/` (ALB) | Kinesis Firehose |
 | S3 Server Access Logs | `s3-access-logs/<bucket>/` | 직접 |
 | Inspector Findings (HIGH/CRITICAL) | `inspector-findings/` | EventBridge → Kinesis Firehose |
 
