@@ -277,6 +277,7 @@ module-name/
 - Email subscription (optional)
 - CloudWatch dashboard (EKS, RDS metrics)
 - Application log group
+- AWS Chatbot Slack channel configuration (alarms + Inspector alerts → `aws-resource-alert` 채널)
 
 **Outputs:** SNS topic ARN, dashboard name
 
@@ -325,6 +326,18 @@ module-name/
 - Monitoring dashboard (Lambda, SQS)
 
 **Outputs:** Dashboard name
+
+### 21. Inspector Module (`modules/inspector/`)
+
+**Purpose:** Vulnerability findings alerting & archival
+
+**Resources:**
+- EventBridge rule (Inspector2 HIGH/CRITICAL findings)
+- SNS topic (→ AWS Chatbot Slack)
+- Kinesis Firehose delivery stream (findings → S3 `inspector-findings/`)
+- IAM roles (Firehose S3 write, EventBridge → Firehose)
+
+**Outputs:** SNS topic ARN
 
 ## Environment Configurations
 

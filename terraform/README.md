@@ -387,6 +387,27 @@ terraform output -json > outputs.json
 9. **Review plans carefully** - Before applying
 10. **Tag all resources** - For cost tracking and governance
 
+## 보안 로그 중앙화 (Security Log Centralization)
+
+모든 보안 관련 로그를 단일 S3 중앙 로그 버킷(`gympt-prod-logs-<account_id>`)에 통합 적재합니다.
+
+| 로그 소스 | S3 prefix | 수집 방식 |
+|---|---|---|
+| CloudTrail (전 리전, 무결성 검증) | `cloudtrail/` | 직접 |
+| VPC Flow Logs (ALL) | `vpc-flow-logs/` | 직접 |
+| ALB Access Logs | `alb-access-logs/` | ALB 속성 (gitops ingress annotation) |
+| CloudFront Access Logs | `cloudfront-logs/` | CloudWatch Logs vended delivery (V2) |
+| WAF Logs | `waf-logs/` (CloudFront), `waf-logs/alb/` (ALB) | Kinesis Firehose |
+| S3 Server Access Logs | `s3-access-logs/<bucket>/` | 직접 |
+| Inspector Findings (HIGH/CRITICAL) | `inspector-findings/` | EventBridge → Kinesis Firehose |
+
+- **Lifecycle**: 90일 후 Glacier 전환, 365일 후 만료 (`modules/s3`)
+- **알림**: CloudWatch Alarm 및 Inspector findings → SNS → AWS Chatbot → Slack(`aws-resource-alert`) (`modules/cloudwatch`, `modules/inspector`)
+- **무결성**: CloudTrail log file validation 활성화
+- 버킷 정책(`modules/s3`)에서 각 로그 소스 서비스 주체(cloudtrail / delivery.logs / ELB 계정 / logging.s3 / firehose)에 해당 prefix 쓰기 권한을 부여
+
+> 참고: Inspector 스캔은 구축 단계에서 finding 폭증으로 일시 비활성화될 수 있습니다. 파이프라인(EventBridge → Firehose → S3)은 유지되며 재활성화 시 자동으로 적재가 재개됩니다.
+
 ## Cost Optimization
 
 ### Development
