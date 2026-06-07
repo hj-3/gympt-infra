@@ -408,6 +408,29 @@ terraform output -json > outputs.json
 
 > 참고: Inspector 스캔은 구축 단계에서 finding 폭증으로 일시 비활성화될 수 있습니다. 파이프라인(EventBridge → Firehose → S3)은 유지되며 재활성화 시 자동으로 적재가 재개됩니다.
 
+## 재해 복구 (Disaster Recovery)
+
+### 목표
+
+- **RTO (Recovery Time Objective): 30분** — 장애 발생부터 서비스 정상화까지의 목표 시간
+- **RPO (Recovery Point Objective): 5분** — 허용 가능한 최대 데이터 손실 시간
+
+### 컴포넌트별 복구 능력
+
+| 컴포넌트 | RTO | RPO | 메커니즘 |
+|---|---|---|---|
+| RDS PostgreSQL | ~1–2분 (자동 failover) | ~0 (동기 복제) / 5분 (PITR) | Multi-AZ, PITR, 30일 자동 백업 |
+| DynamoDB | 복구 수분 | 5분 | PITR (연속 백업) |
+| ElastiCache Redis | ~1–2분 (failover) | 스냅샷 시점 | Multi-AZ, 7일 스냅샷 |
+| EKS 워크로드 | 수분 (자동 재스케줄) | — (무상태) | Karpenter + HPA 자동 복구 |
+| S3 | 즉시 | 버전 단위 | 11 9's 내구성, Versioning |
+
+### 근거
+
+- **RPO 5분**: DynamoDB PITR과 RDS PITR이 5분 단위 복구를 보장한다. Multi-AZ 동기 복제 덕분에 활성 인스턴스 장애 시 데이터 손실은 사실상 0이며, 시점 복구가 필요한 경우에도 최대 5분 이내로 제한된다.
+- **RTO 30분**: 개별 컴포넌트는 자동 failover로 1–2분 내 복구되지만, 전체 서비스 복구·데이터 정합성 검증·수동 개입 여유를 포함한 현실적인 목표값이다.
+- **무인 복구**: 노드/파드 장애는 Karpenter(노드)와 HPA(파드) 자동 스케일링으로 수분 내 무인 복구된다 (Phase 5 인프라 복구).
+
 ## Cost Optimization
 
 ### Development
