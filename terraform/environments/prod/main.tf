@@ -109,8 +109,8 @@ module "eks" {
   enable_public_access          = true
   public_access_cidrs           = var.eks_public_access_cidrs
   node_instance_types           = ["t3.xlarge"]
-  node_desired_size             = 1  # Karpenter handles general workloads; 1 system node only
-  node_min_size                 = 1
+  node_desired_size             = 1  # 평소 1, down.sh 실행 시 0으로 내림
+  node_min_size                 = 0  # 0 허용 → down.sh로 완전 종료 가능
   node_max_size                 = 20
   enable_gpu_node_group         = true
   gpu_node_instance_types       = ["g4dn.xlarge"]
