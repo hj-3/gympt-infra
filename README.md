@@ -16,8 +16,15 @@ GYMPT 플랫폼을 위한 Infrastructure as Code. Terraform을 사용하여 완�
 Terraform은 중앙 S3 로그 버킷의 주요 보안/운영 로그를 Athena로 조회할 수 있도록 Glue Catalog Table을 생성합니다.
 
 - `alb_access_logs`: `alb-access-logs/`
+- `cloudfront_access_logs`: `cloudfront-logs/`
 - `cloudtrail_logs`: `cloudtrail/`
+- `inspector_findings`: `inspector-findings/` (partition projection)
+- `s3_access_logs`: `s3-access-logs/`
 - `vpc_flow_logs`: `vpc-flow-logs/`
+- `waf_alb_logs`: `waf-logs/alb/` (partition projection)
+- `waf_cloudfront_logs`: `waf-logs/cloudfront/` (partition projection)
+
+`AWSLogs/` prefix는 별도 CloudTrail 계열 경로로 두고, 이 모듈에서는 제외합니다.
 
 Athena 쿼리 결과는 Athena results S3 bucket의 `athena-results/` prefix에 저장됩니다. 기존 리소스를 팀원이 각자 `terraform import`하지 않고, Terraform 코드로 새 Glue table을 생성해 state 충돌을 피합니다.
 

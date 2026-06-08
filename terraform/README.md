@@ -415,8 +415,15 @@ terraform output -json > outputs.json
 | Glue table | S3 prefix | 용도 |
 |---|---|---|
 | `alb_access_logs` | `alb-access-logs/` | ALB 요청, 상태 코드, latency, user agent 분석 |
+| `cloudfront_access_logs` | `cloudfront-logs/` | CloudFront edge 요청, cache/result type, URI 분석 |
 | `cloudtrail_logs` | `cloudtrail/AWSLogs/<account_id>/CloudTrail/` | AWS API 감사 로그 분석 |
+| `inspector_findings` | `inspector-findings/<year>/<month>/<day>/<hour>/` | Inspector HIGH/CRITICAL finding 분석. Partition projection 사용 |
+| `s3_access_logs` | `s3-access-logs/` | S3 server access log 분석 |
 | `vpc_flow_logs` | `vpc-flow-logs/AWSLogs/<account_id>/vpcflowlogs/<region>/` | VPC 네트워크 흐름 분석 |
+| `waf_alb_logs` | `waf-logs/alb/<year>/<month>/<day>/<hour>/` | ALB WAF 요청/action/rule 분석. Partition projection 사용 |
+| `waf_cloudfront_logs` | `waf-logs/cloudfront/<year>/<month>/<day>/<hour>/` | CloudFront WAF 요청/action/rule 분석. Partition projection 사용 |
+
+`AWSLogs/` prefix는 별도 CloudTrail 계열 경로로 남겨 두며, 이 Glue module은 `cloudtrail/` prefix의 CloudTrail table만 관리합니다.
 
 Athena workgroup은 `modules/athena`에서 생성하며, 쿼리 결과는 `gympt-<env>-athena-results-<account_id>/athena-results/`에 저장됩니다.
 
@@ -424,8 +431,13 @@ Athena workgroup은 `modules/athena`에서 생성하며, 쿼리 결과는 `gympt
 
 ```sql
 SELECT * FROM alb_access_logs LIMIT 10;
+SELECT date, time, client_ip, uri_stem, status FROM cloudfront_access_logs LIMIT 10;
 SELECT eventtime, eventsource, eventname FROM cloudtrail_logs LIMIT 10;
+SELECT detail.severity, detail.title FROM inspector_findings WHERE year='2026' AND month='06' AND day='05' AND hour='17' LIMIT 10;
+SELECT bucket, operation, key, http_status FROM s3_access_logs LIMIT 10;
 SELECT srcaddr, dstaddr, action FROM vpc_flow_logs LIMIT 10;
+SELECT action, httprequest.clientip, httprequest.uri FROM waf_alb_logs WHERE year='2026' AND month='06' AND day='08' AND hour='00' LIMIT 10;
+SELECT action, httprequest.clientip, httprequest.uri FROM waf_cloudfront_logs WHERE year='2026' AND month='06' AND day='08' AND hour='00' LIMIT 10;
 ```
 
 ## 재해 복구 (Disaster Recovery)
