@@ -134,6 +134,13 @@ data "aws_security_groups" "eks_additional" {
   }
 }
 
+# Boundary Controller SG (수동 생성). RDS/Redis가 boundary 접근을 허용하도록 data source로 조회.
+# 이 참조가 없으면 apply 때마다 콘솔로 넣은 boundary 인바운드 규칙이 사라짐(drift).
+data "aws_security_group" "boundary" {
+  name   = "gympt-prod-boundary-controller-sg"
+  vpc_id = module.vpc.vpc_id
+}
+
 module "rds" {
   source = "../../modules/rds"
 
@@ -144,7 +151,8 @@ module "rds" {
   allowed_security_group_ids = concat(
     [
       module.eks.node_security_group_id,
-      module.eks.cluster_security_group_id
+      module.eks.cluster_security_group_id,
+      data.aws_security_group.boundary.id
     ],
     data.aws_security_groups.eks_additional.ids
   )
@@ -178,7 +186,8 @@ module "elasticache" {
   allowed_security_group_ids = concat(
     [
       module.eks.node_security_group_id,
-      module.eks.cluster_security_group_id
+      module.eks.cluster_security_group_id,
+      data.aws_security_group.boundary.id
     ],
     data.aws_security_groups.eks_additional.ids
   )

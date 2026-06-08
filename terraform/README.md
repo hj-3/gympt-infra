@@ -465,6 +465,15 @@ SELECT action, httprequest.clientip, httprequest.uri FROM waf_cloudfront_logs WH
 - **RTO 30분**: 개별 컴포넌트는 자동 failover로 1–2분 내 복구되지만, 전체 서비스 복구·데이터 정합성 검증·수동 개입 여유를 포함한 현실적인 목표값이다.
 - **무인 복구**: 노드/파드 장애는 Karpenter(노드)와 HPA(파드) 자동 스케일링으로 수분 내 무인 복구된다 (Phase 5 인프라 복구).
 
+## 접근 제어 (Boundary 제로 트러스트)
+
+Bastion 없이 내부 인프라에 접근하는 HashiCorp Boundary 게이트웨이. SSM은 EC2 부트스트랩용 일회성으로만 쓰고, 일반 인프라 접근은 Boundary로 일원화한다.
+
+- **구성**: Controller + Worker를 EC2 1대에 combined로 운영 (별도 Bastion/Worker EC2 없음, SSM으로 관리 접속). 상태 DB는 RDS의 `boundary` DB, 봉인 키는 KMS CMK 3개(root/worker-auth/recovery).
+- **Target**: RDS PostgreSQL(5432), ElastiCache Redis(6379), EKS API(443). 팀원은 각자 Boundary 클라이언트로 로그인 후 `boundary connect`로 터널 접속하며 모든 세션이 감사 기록된다.
+- **SG 연동**: RDS/Redis 보안그룹이 Boundary SG를 인바운드 허용한다. 이 허용은 `data.aws_security_group.boundary`로 조회해 `allowed_security_group_ids`에 포함시켜 **Terraform으로 영구 관리**한다(수동 추가 시 apply마다 사라지는 drift 방지).
+- **비용**: 평소 Controller EC2를 중지해 비용을 절감한다(EIP 미할당 시 재시작마다 public IP 변경).
+
 ## Cost Optimization
 
 ### Development
