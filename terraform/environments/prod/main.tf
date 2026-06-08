@@ -109,12 +109,12 @@ module "eks" {
   enable_public_access          = true
   public_access_cidrs           = var.eks_public_access_cidrs
   node_instance_types           = ["t3.xlarge"]
-  node_desired_size             = 1  # Karpenter handles general workloads; 1 system node only
+  node_desired_size             = 1 # Karpenter handles general workloads; 1 system node only
   node_min_size                 = 1
   node_max_size                 = 20
   enable_gpu_node_group         = true
   gpu_node_instance_types       = ["g4dn.xlarge"]
-  gpu_node_desired_size         = 0  # Karpenter handles GPU nodes via gpu NodePool
+  gpu_node_desired_size         = 0 # Karpenter handles GPU nodes via gpu NodePool
   gpu_node_min_size             = 0
   gpu_node_max_size             = 3
   bootstrap_self_managed_addons = false # 추가
@@ -454,6 +454,8 @@ resource "aws_iam_role_policy" "grafana_athena" {
       {
         Effect = "Allow"
         Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucketMultipartUploads",
           "s3:ListBucket"
         ]
         Resource = [
