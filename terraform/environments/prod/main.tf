@@ -378,6 +378,114 @@ module "glue" {
   common_tags  = local.common_tags
 }
 
+data "aws_iam_policy_document" "grafana_athena_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [module.eks.oidc_provider_arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.oidc_provider_url, "https://", "")}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(module.eks.oidc_provider_url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:monitoring:kube-prometheus-stack-grafana"]
+    }
+  }
+}
+
+resource "aws_iam_role" "grafana_athena" {
+  name               = "${local.name_prefix}-grafana-athena"
+  assume_role_policy = data.aws_iam_policy_document.grafana_athena_assume_role.json
+  tags               = local.common_tags
+}
+
+resource "aws_iam_role_policy" "grafana_athena" {
+  name = "${local.name_prefix}-grafana-athena"
+  role = aws_iam_role.grafana_athena.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "athena:StartQueryExecution",
+          "athena:StopQueryExecution",
+          "athena:GetQueryExecution",
+          "athena:GetQueryResults",
+          "athena:GetQueryResultsStream",
+          "athena:GetWorkGroup",
+          "athena:ListWorkGroups",
+          "athena:GetDataCatalog",
+          "athena:ListDataCatalogs",
+          "athena:GetDatabase",
+          "athena:ListDatabases",
+          "athena:GetTableMetadata",
+          "athena:ListTableMetadata"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "glue:GetDatabase",
+          "glue:GetDatabases",
+          "glue:GetTable",
+          "glue:GetTables",
+          "glue:GetPartition",
+          "glue:GetPartitions",
+          "glue:BatchGetPartition"
+        ]
+        Resource = [
+          "arn:aws:glue:${local.aws_region}:${local.account_id}:catalog",
+          "arn:aws:glue:${local.aws_region}:${local.account_id}:database/${module.glue.catalog_database_name}",
+          "arn:aws:glue:${local.aws_region}:${local.account_id}:table/${module.glue.catalog_database_name}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = [
+          module.s3.logs_bucket_arn,
+          module.s3.athena_results_bucket_arn
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = [
+          "${module.s3.logs_bucket_arn}/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:AbortMultipartUpload",
+          "s3:ListMultipartUploadParts"
+        ]
+        Resource = [
+          "${module.s3.athena_results_bucket_arn}/athena-results/*"
+        ]
+      }
+    ]
+  })
+}
+
 module "monitoring" {
   source = "../../modules/monitoring"
 

@@ -427,6 +427,8 @@ terraform output -json > outputs.json
 
 Athena workgroup은 `modules/athena`에서 생성하며, 쿼리 결과는 `gympt-<env>-athena-results-<account_id>/athena-results/`에 저장됩니다.
 
+Grafana는 `grafana-athena-datasource` plugin으로 Athena를 조회합니다. Prod 환경은 `aws_iam_role.grafana_athena` IRSA role을 `monitoring/kube-prometheus-stack-grafana` service account에 연결해 Athena, Glue, logs bucket, Athena results bucket 접근 권한을 부여합니다.
+
 검증 쿼리:
 
 ```sql

@@ -84,3 +84,8 @@ output "github_actions_app_role_arn" {
   value       = module.github_oidc.github_actions_app_role_arn
 }
 
+output "grafana_athena_role_arn" {
+  description = "IAM role ARN for Grafana Athena datasource access"
+  value       = aws_iam_role.grafana_athena.arn
+}
+
