@@ -150,7 +150,7 @@ module "rds" {
   )
   instance_class          = "db.t3.large"
   allocated_storage       = 100
-  engine_version          = "17.2"
+  engine_version          = "17.9"
   database_name           = "gympt"
   master_username         = "gymptadmin"
   master_password         = var.rds_master_password
