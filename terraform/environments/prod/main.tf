@@ -119,8 +119,9 @@ module "eks" {
   gpu_node_desired_size         = 0  # Karpenter handles GPU nodes via gpu NodePool
   gpu_node_min_size             = 0
   gpu_node_max_size             = 3
-  bootstrap_self_managed_addons = false # 추가
-  common_tags                   = local.common_tags
+  bootstrap_self_managed_addons  = false # 추가
+  enabled_cluster_log_types      = []    # 비용 절감: control plane 로그 OFF
+  common_tags                    = local.common_tags
 
 }
 
@@ -370,6 +371,7 @@ module "cloudtrail" {
   s3_bucket_name      = module.s3.logs_bucket_id
   s3_bucket_policy_id = module.s3.logs_bucket_policy_id
   common_tags         = local.common_tags
+  kms_key_id          = "arn:aws:kms:ap-northeast-2:337112169365:key/63574ed7-d86f-434f-86f5-295cf5788fe2"
 }
 
 module "athena" {
