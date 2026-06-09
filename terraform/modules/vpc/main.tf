@@ -41,7 +41,7 @@ resource "aws_internet_gateway" "main" {
 
 # Elastic IPs for NAT Gateways
 resource "aws_eip" "nat" {
-  count  = 2
+  count  = var.nat_gateway_count
   domain = "vpc"
 
   tags = merge(
@@ -108,7 +108,7 @@ resource "aws_subnet" "private_db" {
 
 # NAT Gateways
 resource "aws_nat_gateway" "main" {
-  count         = 2
+  count         = var.nat_gateway_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
@@ -162,10 +162,11 @@ resource "aws_route_table" "private_app" {
 }
 
 resource "aws_route" "private_app_nat" {
-  count                  = 2
+  # nat_gateway_count=0 이면 라우트 없음, 1이면 둘 다 NAT[0], 2이면 AZ별 NAT
+  count                  = var.nat_gateway_count > 0 ? 2 : 0
   route_table_id         = aws_route_table.private_app[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.main[count.index].id
+  nat_gateway_id         = aws_nat_gateway.main[min(count.index, var.nat_gateway_count - 1)].id
 }
 
 resource "aws_route_table_association" "private_app" {
@@ -189,10 +190,10 @@ resource "aws_route_table" "private_db" {
 }
 
 resource "aws_route" "private_db_nat" {
-  count                  = 2
+  count                  = var.nat_gateway_count > 0 ? 2 : 0
   route_table_id         = aws_route_table.private_db[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.main[count.index].id
+  nat_gateway_id         = aws_nat_gateway.main[min(count.index, var.nat_gateway_count - 1)].id
 }
 
 resource "aws_route_table_association" "private_db" {
@@ -254,23 +255,10 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   )
 }
 
-resource "aws_vpc_endpoint" "bedrock_runtime" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.bedrock-runtime"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private_app[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-  
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-bedrock-endpoint"
-    }
-  )
-}
+# ── 클러스터 전용 endpoints (EKS 노드 없을 때 false로 절감) ──────────────────
 
 resource "aws_vpc_endpoint" "ecr_api" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.api"
   vpc_endpoint_type   = "Interface"
@@ -278,15 +266,11 @@ resource "aws_vpc_endpoint" "ecr_api" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-ecr-api-endpoint"
-    }
-  )
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-ecr-api-endpoint" })
 }
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.dkr"
   vpc_endpoint_type   = "Interface"
@@ -294,12 +278,7 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-ecr-dkr-endpoint"
-    }
-  )
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-ecr-dkr-endpoint" })
 }
 
 # Security Group for VPC Endpoints
@@ -355,6 +334,7 @@ resource "aws_flow_log" "main" {
 # Additional VPC Endpoints for Karpenter and EKS
 
 resource "aws_vpc_endpoint" "ec2" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ec2"
   vpc_endpoint_type   = "Interface"
@@ -362,13 +342,10 @@ resource "aws_vpc_endpoint" "ec2" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-ec2-endpoint"
-    }
-  )
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-ec2-endpoint" })
 }
+
+# ── Lambda가 항상 필요한 endpoints ───────────────────────────────────────────
 
 resource "aws_vpc_endpoint" "sts" {
   vpc_id              = aws_vpc.main.id
@@ -403,6 +380,7 @@ resource "aws_vpc_endpoint" "logs" {
 }
 
 resource "aws_vpc_endpoint" "eks" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.eks"
   vpc_endpoint_type   = "Interface"
@@ -410,15 +388,11 @@ resource "aws_vpc_endpoint" "eks" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-eks-endpoint"
-    }
-  )
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-eks-endpoint" })
 }
 
 resource "aws_vpc_endpoint" "autoscaling" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.autoscaling"
   vpc_endpoint_type   = "Interface"
@@ -426,12 +400,7 @@ resource "aws_vpc_endpoint" "autoscaling" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    var.common_tags,
-    {
-      Name = "${local.name_prefix}-autoscaling-endpoint"
-    }
-  )
+  tags = merge(var.common_tags, { Name = "${local.name_prefix}-autoscaling-endpoint" })
 }
 
 # SQS — agent-service, remediation-worker, report-service 등 SQS 큐 사용
@@ -458,8 +427,9 @@ resource "aws_vpc_endpoint" "kms" {
   tags = merge(var.common_tags, { Name = "${local.name_prefix}-kms-endpoint" })
 }
 
-# ELB — AWS Load Balancer Controller가 ALB 생성/관리에 사용
+# ELB — AWS Load Balancer Controller가 ALB 생성/관리에 사용 (클러스터 전용)
 resource "aws_vpc_endpoint" "elasticloadbalancing" {
+  count               = var.enable_cluster_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.elasticloadbalancing"
   vpc_endpoint_type   = "Interface"

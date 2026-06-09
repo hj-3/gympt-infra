@@ -30,3 +30,19 @@ variable "flow_logs_bucket_arn" {
   type        = string
   default     = ""
 }
+
+variable "enable_cluster_endpoints" {
+  description = "ECR/EC2/autoscaling/EKS/ELB VPC endpoints. EKS 노드 있을 때만 필요. false로 설정하면 ~$87/month 절감."
+  type        = bool
+  default     = true
+}
+
+variable "nat_gateway_count" {
+  description = "NAT Gateway 수: 0=삭제(비용절감), 1=단일(권장), 2=HA(AZ별 1개)"
+  type        = number
+  default     = 1
+  validation {
+    condition     = contains([0, 1, 2], var.nat_gateway_count)
+    error_message = "nat_gateway_count는 0, 1, 2 중 하나여야 합니다."
+  }
+}

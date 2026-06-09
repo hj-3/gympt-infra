@@ -79,12 +79,14 @@ module "s3" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  project_name         = local.project_name
-  env                  = local.env
-  aws_region           = local.aws_region
-  vpc_cidr             = "10.1.0.0/16"
-  flow_logs_bucket_arn = module.s3.logs_bucket_arn
-  common_tags          = local.common_tags
+  project_name             = local.project_name
+  env                      = local.env
+  aws_region               = local.aws_region
+  vpc_cidr                 = "10.1.0.0/16"
+  flow_logs_bucket_arn     = module.s3.logs_bucket_arn
+  nat_gateway_count        = 0     # ← down: 0 / up: 1
+  enable_cluster_endpoints = false # ← down: false / up: true
+  common_tags              = local.common_tags
 }
 
 module "ecr" {
@@ -108,10 +110,10 @@ module "eks" {
   cluster_version               = "1.35"
   enable_public_access          = true
   public_access_cidrs           = var.eks_public_access_cidrs
-  node_instance_types           = ["t3.xlarge"]
-  node_desired_size             = 1  # 평소 1, down.sh 실행 시 0으로 내림
-  node_min_size                 = 0  # 0 허용 → down.sh로 완전 종료 가능
-  node_max_size                 = 20
+  node_instance_types           = ["t3.medium"]  # 시스템 노드용 (Karpenter/CoreDNS/ArgoCD)
+  node_desired_size             = 1              # ← down: 0으로 스크립트 조정 / up: 1
+  node_min_size                 = 0
+  node_max_size                 = 3             # 시스템 노드는 최대 3으로 충분
   enable_gpu_node_group         = true
   gpu_node_instance_types       = ["g4dn.xlarge"]
   gpu_node_desired_size         = 0  # Karpenter handles GPU nodes via gpu NodePool
@@ -179,9 +181,10 @@ module "dynamodb" {
 module "elasticache" {
   source = "../../modules/elasticache"
 
-  project_name     = local.project_name
-  env              = local.env
-  vpc_id           = module.vpc.vpc_id
+  enabled      = false  # ← down: false / up: true
+  project_name = local.project_name
+  env          = local.env
+  vpc_id       = module.vpc.vpc_id
   cache_subnet_ids = module.vpc.private_app_subnet_ids
   allowed_security_group_ids = concat(
     [
@@ -194,10 +197,10 @@ module "elasticache" {
   node_type                  = "cache.t3.medium"
   num_cache_nodes            = 2
   engine_version             = "7.0"
-  auth_token_enabled         = true
+  auth_token_enabled         = false
   auth_token                 = var.redis_auth_token
-  automatic_failover_enabled = true
-  multi_az_enabled           = true
+  automatic_failover_enabled = false
+  multi_az_enabled           = false
   snapshot_retention_limit   = 7
   common_tags                = local.common_tags
 }

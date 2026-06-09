@@ -24,7 +24,7 @@ resource "aws_eks_cluster" "main" {
     }
   )
  lifecycle {
-    ignore_changes = [bootstrap_self_managed_addons]
+    ignore_changes = [bootstrap_self_managed_addons, encryption_config]
   }
   depends_on = [
     aws_iam_role_policy_attachment.cluster_policy,

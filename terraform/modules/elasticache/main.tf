@@ -1,5 +1,6 @@
 locals {
   name_prefix = "${var.project_name}-${var.env}"
+  enabled     = var.enabled ? 1 : 0
 }
 
 data "aws_vpc" "this" {
@@ -8,6 +9,7 @@ data "aws_vpc" "this" {
 
 # ElastiCache Subnet Group
 resource "aws_elasticache_subnet_group" "main" {
+  count =  local.enabled
   name       = "${local.name_prefix}-redis-subnet-group"
   subnet_ids = var.cache_subnet_ids
 
@@ -21,6 +23,7 @@ resource "aws_elasticache_subnet_group" "main" {
 
 # Security Group for ElastiCache
 resource "aws_security_group" "redis" {
+  count =  local.enabled
   name_prefix = "${local.name_prefix}-redis-"
   description = "Security group for ElastiCache Redis"
   vpc_id      = var.vpc_id
@@ -55,6 +58,7 @@ resource "aws_security_group" "redis" {
 
 # ElastiCache Parameter Group
 resource "aws_elasticache_parameter_group" "main" {
+  count =  local.enabled
   name   = "${local.name_prefix}-redis-params"
   family = "redis7"
 
@@ -83,6 +87,7 @@ resource "aws_elasticache_parameter_group" "main" {
 
 # ElastiCache Replication Group (Cluster Mode Disabled)
 resource "aws_elasticache_replication_group" "main" {
+  count =  local.enabled
   replication_group_id = "${local.name_prefix}-redis"
   description          = "Redis cluster for ${local.name_prefix}"
 
@@ -92,9 +97,9 @@ resource "aws_elasticache_replication_group" "main" {
   num_cache_clusters   = var.num_cache_nodes
   port                 = 6379
 
-  parameter_group_name = aws_elasticache_parameter_group.main.name
-  subnet_group_name    = aws_elasticache_subnet_group.main.name
-  security_group_ids   = [aws_security_group.redis.id]
+  parameter_group_name = aws_elasticache_parameter_group.main[0].name
+  subnet_group_name    = aws_elasticache_subnet_group.main[0].name
+  security_group_ids   = [aws_security_group.redis[0].id]
 
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
@@ -122,6 +127,7 @@ resource "aws_elasticache_replication_group" "main" {
 
 # CloudWatch Alarms
 resource "aws_cloudwatch_metric_alarm" "cpu_high" {
+  count =  local.enabled
   alarm_name          = "${local.name_prefix}-redis-cpu-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -141,6 +147,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "memory_high" {
+  count =  local.enabled
   alarm_name          = "${local.name_prefix}-redis-memory-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -160,6 +167,7 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "evictions_high" {
+  count =  local.enabled
   alarm_name          = "${local.name_prefix}-redis-evictions-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
@@ -179,6 +187,7 @@ resource "aws_cloudwatch_metric_alarm" "evictions_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "connections_high" {
+  count =  local.enabled
   alarm_name          = "${local.name_prefix}-redis-connections-high"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
