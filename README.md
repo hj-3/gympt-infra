@@ -46,11 +46,7 @@ cd gympt-infra
 ### 보안 설정 현황
 
 - **CloudTrail**: multi-region, log file validation, KMS CMK 암호화(`alias/gympt-prod-cloudtrail`), S3 적재
-- **EKS control plane 로그**: 비용 절감으로 OFF (`enabled_cluster_log_types = []`) — 시연 시 수동 on
+- **EKS control plane 로그**: OFF (`enabled_cluster_log_types = []`) — 시연 시 수동 on
 - **CloudWatch 로그 보존**: EKS control plane 로그 그룹 retention 1일
-
-### 비용 절감 운영
-
-클러스터 종료/재개는 `scripts/down.sh` / `scripts/up.sh` 사용. 상세 내용은 [docs/COST-OPTIMIZATION.md](docs/COST-OPTIMIZATION.md) 참조.
 
 **최종 업데이트**: 2026-06-09
