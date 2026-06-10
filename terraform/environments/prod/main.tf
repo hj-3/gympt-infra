@@ -323,10 +323,6 @@ module "iam" {
       namespace       = "gympt-prod"
       service_account = "report-service-prod"
     }
-    remediation-worker = {
-      namespace       = "gympt-prod"
-      service_account = "remediation-worker-prod"
-    }
     kvs-consumer-service = {
       namespace       = "gympt-prod"
       service_account = "kvs-consumer-service-prod"

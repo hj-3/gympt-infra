@@ -37,10 +37,6 @@ variable "pod_service_accounts" {
       namespace       = "report-service"
       service_account = "report-service"
     }
-    remediation-worker = {
-      namespace       = "workers"
-      service_account = "remediation-worker"
-    }
     generic-worker = {
       namespace       = "workers"
       service_account = "generic-worker"

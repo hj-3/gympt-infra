@@ -6,7 +6,6 @@ locals {
     "agent-service",
     "posture-analysis-service",
     "report-service",
-    "remediation-worker",
     "kvs-consumer-service"
   ]
 }
