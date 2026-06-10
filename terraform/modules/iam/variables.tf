@@ -68,3 +68,8 @@ variable "bedrock_region" {
   description = "AWS region for Bedrock service"
   default     = "us-west-2"
 }
+
+variable "bedrock_agent_id" {
+  type        = string
+  description = "Bedrock Agent ID for agent-service InvokeAgent permission"
+}

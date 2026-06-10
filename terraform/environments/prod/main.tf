@@ -300,6 +300,7 @@ module "iam" {
   env                 = local.env
   aws_region          = local.aws_region
   bedrock_region      = "us-west-2"
+  bedrock_agent_id    = "WPQ0RESSZS"
   oidc_provider_arn   = module.eks.oidc_provider_arn
   oidc_provider_url   = module.eks.oidc_provider_url
   s3_bucket_arns      = values(module.s3.bucket_arns)
