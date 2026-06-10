@@ -45,8 +45,18 @@ cd gympt-infra
 
 ### 보안 설정 현황
 
+**감사 및 로깅**
 - **CloudTrail**: multi-region, log file validation, KMS CMK 암호화(`alias/gympt-prod-cloudtrail`), S3 적재
 - **EKS control plane 로그**: OFF (`enabled_cluster_log_types = []`) — 시연 시 수동 on
 - **CloudWatch 로그 보존**: EKS control plane 로그 그룹 retention 1일
 
-**최종 업데이트**: 2026-06-09
+**IRSA 최소 권한**
+- **ECR Pull**: 노드 역할 `AmazonEC2ContainerRegistryReadOnly` 제거 → `gympt-prod/*` 레포 한정 커스텀 정책
+- **IMDSv2 hop limit**: Karpenter EC2NodeClass `httpPutResponseHopLimit: 1` — 파드의 노드 IMDS 접근 차단
+- **agent-service**: Bedrock `InvokeAgent` → `agent/WPQ0RESSZS` 한정, `Retrieve` → 계정 KB 한정, DynamoDB → `agent_interactions` 테이블 전용
+- **posture-analysis-service**: S3 → `media` 버킷 한정(`PutObject`/`GetObject`/`ListBucket`), DynamoDB → `posture_events` 테이블 전용, KVS Signaling → `prod-live-sessions-signaling` 채널 전용
+
+**정리**
+- **remediation-worker**: ECR 레포, IAM 역할/정책, Terraform 코드, K8s 리소스 전체 제거 (Karpenter/HPA/ArgoCD로 기능 대체)
+
+**최종 업데이트**: 2026-06-10
