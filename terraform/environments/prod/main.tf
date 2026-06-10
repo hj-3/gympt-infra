@@ -300,7 +300,8 @@ module "iam" {
   env                 = local.env
   aws_region          = local.aws_region
   bedrock_region      = "us-west-2"
-  bedrock_agent_id    = "WPQ0RESSZS"
+  bedrock_agent_id          = "WPQ0RESSZS"
+  kvs_signaling_channel_arn = "arn:aws:kinesisvideo:ap-northeast-2:337112169365:channel/prod-live-sessions-signaling/1779644737658"
   oidc_provider_arn   = module.eks.oidc_provider_arn
   oidc_provider_url   = module.eks.oidc_provider_url
   s3_bucket_arns      = values(module.s3.bucket_arns)

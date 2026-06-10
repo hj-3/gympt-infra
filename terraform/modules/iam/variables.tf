@@ -73,3 +73,8 @@ variable "bedrock_agent_id" {
   type        = string
   description = "Bedrock Agent ID for agent-service InvokeAgent permission"
 }
+
+variable "kvs_signaling_channel_arn" {
+  type        = string
+  description = "KVS Signaling Channel ARN for posture-analysis-service"
+}
