@@ -1,10 +1,14 @@
 import json
+import logging
 import os
 import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
 import boto3
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 AWS_REGION = os.environ["AWS_REGION"]
 ACCOUNT_ID = os.environ["ACCOUNT_ID"]
@@ -30,6 +34,7 @@ SECURITY_EVENTS = {
 
 def lambda_handler(event, context):
     trigger = _identify_trigger(event)
+    logger.info("trigger=%s", trigger)
 
     if trigger == "cloudtrail":
         findings = _handle_cloudtrail_event(event)
@@ -41,16 +46,25 @@ def lambda_handler(event, context):
         findings = _handle_scheduled_scan()
         source_label = "정기 스캔 (30분)"
     else:
+        logger.warning("unknown trigger source=%s detail-type=%s",
+                       event.get("source"), event.get("detail-type"))
         return {"statusCode": 200, "body": "unknown trigger"}
 
     if not findings:
+        logger.info("no findings")
         return {"statusCode": 200, "body": "no findings"}
 
     analysis = _analyze_with_bedrock(findings, trigger)
     analysis["source"] = source_label
+    level = analysis.get("threat_level", "INFO")
+    logger.info("bedrock result: threat_level=%s summary=%s", level, str(analysis.get("summary", ""))[:120])
 
     if _should_alert(analysis, trigger):
+        logger.info("sending slack alert")
         _send_to_slack(analysis)
+        logger.info("slack sent")
+    else:
+        logger.info("no alert (level=%s trigger=%s)", level, trigger)
 
     return {"statusCode": 200, "body": "ok"}
 
@@ -348,8 +362,9 @@ def _analyze_with_bedrock(findings, trigger):
         s, e = text.find("{"), text.rfind("}") + 1
         if s >= 0 and e > s:
             return json.loads(text[s:e])
-    except Exception:
-        pass
+        logger.warning("bedrock response has no JSON: %s", text[:200])
+    except Exception as exc:
+        logger.error("bedrock error: %s", exc)
 
     return {
         "threat_level": "INFO",

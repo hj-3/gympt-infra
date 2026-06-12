@@ -575,7 +575,7 @@ module "security_monitor" {
   slack_webhook_secret_name = "gympt/prod/slack/security-webhook-url"
   slack_webhook_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:${local.account_id}:secret:gympt/prod/slack/security-webhook-url-bln6XW"
   bedrock_region            = "us-west-2"
-  bedrock_model_id          = "anthropic.claude-3-haiku-20240307-v1:0"
+  bedrock_model_id          = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
   log_retention_days        = 30
   common_tags               = local.common_tags
 }

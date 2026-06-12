@@ -129,11 +129,15 @@ resource "aws_iam_role_policy" "security_monitor" {
           "${var.athena_results_bucket_arn}/security-monitor/*"
         ]
       },
-      # Bedrock - Claude Haiku 모델 호출 (us-west-2)
+      # Bedrock - Claude Haiku 호출 (cross-region inference profile)
+      # us.* 모델은 foundation-model ARN + inference-profile ARN 둘 다 필요
       {
-        Effect   = "Allow"
-        Action   = ["bedrock:InvokeModel"]
-        Resource = "arn:aws:bedrock:${var.bedrock_region}::foundation-model/${var.bedrock_model_id}"
+        Effect = "Allow"
+        Action = ["bedrock:InvokeModel"]
+        Resource = [
+          "arn:aws:bedrock:*::foundation-model/anthropic.claude-haiku-4-5-20251001-v1:0",
+          "arn:aws:bedrock:${var.bedrock_region}:${var.account_id}:inference-profile/${var.bedrock_model_id}"
+        ]
       },
       # Secrets Manager - Slack 웹훅 URL 조회
       {
