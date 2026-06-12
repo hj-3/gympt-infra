@@ -274,7 +274,7 @@ resource "kubernetes_manifest" "karpenter_node_class" {
       metadataOptions = {
         httpEndpoint            = "enabled"
         httpProtocolIPv6        = "disabled"
-        httpPutResponseHopLimit = 2
+        httpPutResponseHopLimit = 1
         httpTokens              = "required"
       }
       tags = merge(
