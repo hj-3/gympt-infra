@@ -248,10 +248,17 @@ LIMIT 10
 
 
 def _build_vpc_flow_query():
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    partition_conds = (
+        f"(year='{now.year}' AND month='{now.month:02d}' AND day='{now.day:02d}')"
+        f" OR (year='{yesterday.year}' AND month='{yesterday.month:02d}' AND day='{yesterday.day:02d}')"
+    )
     return f"""
 SELECT srcaddr, dstaddr, dstport, COUNT(*) AS reject_count
 FROM "{GLUE_DB}"."vpc_flow_logs"
-WHERE action = 'REJECT'
+WHERE ({partition_conds})
+  AND action = 'REJECT'
 GROUP BY srcaddr, dstaddr, dstport
 HAVING COUNT(*) >= 10
 ORDER BY reject_count DESC
@@ -259,12 +266,19 @@ LIMIT 10
 """
 
 
+_MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+
 def _build_s3_access_query():
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    today_pat    = f"{now.day:02d}/{_MONTHS[now.month-1]}/{now.year}"
+    yesterday_pat = f"{yesterday.day:02d}/{_MONTHS[yesterday.month-1]}/{yesterday.year}"
     return f"""
 SELECT remote_ip, requester, operation, error_code, COUNT(*) AS count
 FROM "{GLUE_DB}"."s3_access_logs"
 WHERE error_code IS NOT NULL
   AND error_code NOT IN ('-', '')
+  AND (request_datetime LIKE '%{today_pat}%' OR request_datetime LIKE '%{yesterday_pat}%')
 GROUP BY remote_ip, requester, operation, error_code
 HAVING COUNT(*) >= 5
 ORDER BY count DESC
@@ -273,10 +287,17 @@ LIMIT 10
 
 
 def _build_alb_access_query():
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    partition_conds = (
+        f"(year='{now.year}' AND month='{now.month:02d}' AND day='{now.day:02d}')"
+        f" OR (year='{yesterday.year}' AND month='{yesterday.month:02d}' AND day='{yesterday.day:02d}')"
+    )
     return f"""
 SELECT client_ip, request_verb, elb_status_code, COUNT(*) AS count
 FROM "{GLUE_DB}"."alb_access_logs"
-WHERE elb_status_code >= 400
+WHERE ({partition_conds})
+  AND elb_status_code >= 400
 GROUP BY client_ip, request_verb, elb_status_code
 HAVING COUNT(*) >= 10
 ORDER BY count DESC
