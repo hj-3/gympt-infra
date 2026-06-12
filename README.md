@@ -15,12 +15,12 @@ GYMPT 플랫폼을 위한 Infrastructure as Code. Terraform을 사용하여 완�
 
 Terraform은 중앙 S3 로그 버킷의 주요 보안/운영 로그를 Athena로 조회할 수 있도록 Glue Catalog Table을 생성합니다.
 
-- `alb_access_logs`: `alb-access-logs/`
+- `alb_access_logs`: `alb-access-logs/` (partition projection)
 - `cloudfront_access_logs`: `cloudfront-logs/`
 - `cloudtrail_logs`: `cloudtrail/`
 - `inspector_findings`: `inspector-findings/` (partition projection)
 - `s3_access_logs`: `s3-access-logs/`
-- `vpc_flow_logs`: `vpc-flow-logs/`
+- `vpc_flow_logs`: `vpc-flow-logs/` (partition projection)
 - `waf_alb_logs`: `waf-logs/alb/` (partition projection)
 - `waf_cloudfront_logs`: `waf-logs/cloudfront/` (partition projection)
 
@@ -50,6 +50,16 @@ cd gympt-infra
 - **EKS control plane 로그**: OFF (`enabled_cluster_log_types = []`) — 시연 시 수동 on
 - **CloudWatch 로그 보존**: EKS control plane 로그 그룹 retention 1일
 
+**AI 보안관제 시스템**
+- **구성**: EventBridge → Lambda → Bedrock (Claude Haiku 4.5) → Slack
+- **실시간 감지**: CloudTrail 보안 이벤트 (IAM·SG·Trail·S3 정책 변경 등 20종), MFA 없는 콘솔 로그인
+- **정기 스캔**: 30분 간격으로 WAF·Inspector·VPC Flow·S3·ALB 로그 Athena 분석
+- **알림**: 위협 레벨(CRITICAL/HIGH/MEDIUM/LOW) 분류 후 Slack `#security-alerts` 채널 발송
+- **Slack webhook**: Secrets Manager `gympt/prod/slack/security-webhook-url` 참조
+
+**네트워크 격리**
+- **VPC Endpoints SG**: egress `0.0.0.0/0` → VPC CIDR(`10.0.0.0/16`)으로 제한
+
 **IRSA 최소 권한**
 - **ECR Pull**: 노드 역할 `AmazonEC2ContainerRegistryReadOnly` 제거 → `gympt-prod/*` 레포 한정 커스텀 정책
 - **IMDSv2 hop limit**: Karpenter EC2NodeClass `httpPutResponseHopLimit: 1` — 파드의 노드 IMDS 접근 차단
@@ -59,4 +69,4 @@ cd gympt-infra
 **정리**
 - **remediation-worker**: ECR 레포, IAM 역할/정책, Terraform 코드, K8s 리소스 전체 제거 (Karpenter/HPA/ArgoCD로 기능 대체)
 
-**최종 업데이트**: 2026-06-10
+**최종 업데이트**: 2026-06-12
