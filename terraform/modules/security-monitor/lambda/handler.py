@@ -61,7 +61,7 @@ def lambda_handler(event, context):
 
     if _should_alert(analysis, trigger):
         logger.info("sending slack alert")
-        _send_to_slack(analysis)
+        _send_to_slack(analysis, findings)
         logger.info("slack sent")
     else:
         logger.info("no alert (level=%s trigger=%s)", level, trigger)
@@ -383,12 +383,85 @@ def _should_alert(analysis, trigger):
 
 # ── Slack 전송 ────────────────────────────────────────────────────────────────
 
+def _format_findings_text(findings):
+    if not findings:
+        return "데이터 없음"
+    trigger = findings.get("trigger", "")
+
+    if trigger == "cloudtrail_realtime":
+        uid = findings.get("user_identity", {})
+        lines = [
+            f"• 이벤트: `{findings.get('event_name', '-')}`",
+            f"• 서비스: {findings.get('event_source', '-')}",
+            f"• 사용자: {uid.get('arn') or uid.get('username') or '-'}",
+            f"• 소스 IP: {findings.get('source_ip', '-')}",
+            f"• 시각: {findings.get('event_time', '-')}",
+        ]
+        if findings.get("request_parameters") and findings["request_parameters"] != "{}":
+            lines.append(f"• 파라미터: `{findings['request_parameters'][:200]}`")
+        if findings.get("error_code"):
+            lines.append(f"• 에러: {findings['error_code']}")
+        return "\n".join(lines)
+
+    if trigger == "console_login_no_mfa":
+        return "\n".join([
+            f"• 사용자: {findings.get('username', '-')}",
+            f"• 소스 IP: {findings.get('source_ip', '-')}",
+            f"• MFA 사용: {findings.get('mfa_used', 'No')}",
+            f"• 로그인 결과: {findings.get('login_result', '-')}",
+            f"• 시각: {findings.get('event_time', '-')}",
+        ])
+
+    if trigger == "scheduled_scan":
+        data = findings.get("data", {})
+        parts = []
+        if "cloudtrail" in data:
+            events = data["cloudtrail"].get("events", [])[:3]
+            if events:
+                parts.append("*[CloudTrail]*")
+                for ev in events:
+                    parts.append(f"• `{ev.get('event_name')}` | {ev.get('username', '-')} | {ev.get('source_ip', '-')}")
+        if "vpc_flow" in data:
+            rows = data["vpc_flow"].get("rows", [])[:3]
+            if rows:
+                parts.append("*[VPC Flow REJECT]*")
+                for r in rows:
+                    parts.append(f"• {r.get('srcaddr','-')} → {r.get('dstaddr','-')}:{r.get('dstport','-')} | {r.get('reject_count','-')}건")
+        if "waf" in data:
+            rows = data["waf"].get("rows", [])[:3]
+            if rows:
+                parts.append("*[WAF BLOCK]*")
+                for r in rows:
+                    parts.append(f"• {r.get('client_ip','-')} | {r.get('terminatingruleid','-')} | {r.get('block_count','-')}건")
+        if "s3_access" in data:
+            rows = data["s3_access"].get("rows", [])[:3]
+            if rows:
+                parts.append("*[S3 이상 접근]*")
+                for r in rows:
+                    parts.append(f"• {r.get('requester','-')} | `{r.get('operation','-')}` | {r.get('error_code','-')} | {r.get('count','-')}건")
+        if "alb_access" in data:
+            rows = data["alb_access"].get("rows", [])[:3]
+            if rows:
+                parts.append("*[ALB 오류]*")
+                for r in rows:
+                    parts.append(f"• {r.get('client_ip','-')} | {r.get('request_verb','-')} {r.get('elb_status_code','-')} | {r.get('count','-')}건")
+        if "inspector" in data:
+            rows = data["inspector"].get("rows", [])[:3]
+            if rows:
+                parts.append("*[Inspector 취약점]*")
+                for r in rows:
+                    parts.append(f"• [{r.get('detail.severity','-')}] {str(r.get('detail.title','-'))[:60]}")
+        return "\n".join(parts) if parts else "데이터 없음"
+
+    return str(findings)[:300]
+
+
 def _get_webhook_url():
     sm = boto3.client("secretsmanager", region_name=AWS_REGION)
     return sm.get_secret_value(SecretId=SLACK_SECRET_NAME)["SecretString"]
 
 
-def _send_to_slack(analysis):
+def _send_to_slack(analysis, findings=None):
     level = analysis.get("threat_level", "INFO")
     level_cfg = {
         "CRITICAL": ("🚨", "#FF0000"),
@@ -400,6 +473,7 @@ def _send_to_slack(analysis):
     emoji, color = level_cfg.get(level, ("ℹ️", "#0099FF"))
     runbook = "\n".join(f"{i+1}. {s}" for i, s in enumerate(analysis.get("runbook", [])))
     now_kst = datetime.now(KST).strftime("%Y-%m-%d %H:%M KST")
+    findings_text = _format_findings_text(findings)
 
     payload = {
         "attachments": [{
@@ -411,6 +485,15 @@ def _send_to_slack(analysis):
                 },
                 {
                     "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*발생 위치*\n{analysis.get('source', '-')}"},
+                },
+                {
+                    "type": "section",
+                    "text": {"type": "mrkdwn", "text": f"*발생 이벤트*\n{findings_text}"},
+                },
+                {"type": "divider"},
+                {
+                    "type": "section",
                     "text": {"type": "mrkdwn", "text": f"*요약*\n{analysis.get('summary', '')}"},
                 },
                 {
@@ -419,14 +502,14 @@ def _send_to_slack(analysis):
                 },
                 {
                     "type": "section",
-                    "text": {"type": "mrkdwn", "text": f"*대응 Runbook*\n{runbook}"},
+                    "text": {"type": "mrkdwn", "text": f"*대응*\n{runbook}"},
                 },
                 {"type": "divider"},
                 {
                     "type": "context",
                     "elements": [{
                         "type": "mrkdwn",
-                        "text": f"분석 시각: {now_kst} | 소스: {analysis.get('source', '')} | 계정: {ACCOUNT_ID}",
+                        "text": f"분석 시각: {now_kst} | 계정: {ACCOUNT_ID}",
                     }],
                 },
             ],
