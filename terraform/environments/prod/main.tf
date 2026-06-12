@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {
@@ -554,4 +558,24 @@ module "inspector" {
   env             = local.env
   logs_bucket_arn = module.s3.logs_bucket_arn
   common_tags     = local.common_tags
+}
+
+module "security_monitor" {
+  source = "../../modules/security-monitor"
+
+  project_name              = local.project_name
+  env                       = local.env
+  aws_region                = local.aws_region
+  account_id                = local.account_id
+  glue_database_name        = module.glue.catalog_database_name
+  athena_results_bucket_id  = module.s3.athena_results_bucket_id
+  athena_results_bucket_arn = module.s3.athena_results_bucket_arn
+  logs_bucket_arn           = module.s3.logs_bucket_arn
+  logs_bucket_id            = module.s3.logs_bucket_id
+  slack_webhook_secret_name = "gympt/prod/slack/security-webhook-url"
+  slack_webhook_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:${local.account_id}:secret:gympt/prod/slack/security-webhook-url-bln6XW"
+  bedrock_region            = "us-west-2"
+  bedrock_model_id          = "anthropic.claude-3-haiku-20240307-v1:0"
+  log_retention_days        = 30
+  common_tags               = local.common_tags
 }
