@@ -340,8 +340,8 @@ resource "kubernetes_manifest" "karpenter_node_pool_general" {
         }
       }
       limits = {
-        cpu    = "100"
-        memory = "200Gi"
+        cpu    = var.karpenter_general_cpu_limit
+        memory = var.karpenter_general_memory_limit
       }
       disruption = {
         consolidationPolicy = "WhenEmptyOrUnderutilized"
@@ -366,7 +366,7 @@ resource "kubernetes_manifest" "karpenter_node_pool_gpu" {
       template = {
         metadata = {
           labels = {
-            gpu           = "true"
+            gpu              = "true"
             "nvidia.com/gpu" = "true"
           }
         }
@@ -404,9 +404,9 @@ resource "kubernetes_manifest" "karpenter_node_pool_gpu" {
         }
       }
       limits = {
-        cpu               = "32"
-        memory            = "128Gi"
-        "nvidia.com/gpu" = "4"
+        cpu              = var.karpenter_gpu_cpu_limit
+        memory           = var.karpenter_gpu_memory_limit
+        "nvidia.com/gpu" = var.karpenter_gpu_count_limit
       }
       disruption = {
         consolidationPolicy = "WhenEmptyOrUnderutilized"
