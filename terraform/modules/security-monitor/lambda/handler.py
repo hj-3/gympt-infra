@@ -332,16 +332,18 @@ LIMIT 10
 
 # ── Bedrock 분석 ──────────────────────────────────────────────────────────────
 
-def _analyze_with_bedrock(findings, trigger):
-    bedrock = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
-    findings_str = json.dumps(findings, ensure_ascii=False, default=str)
-    if len(findings_str) > 6000:
-        findings_str = findings_str[:6000] + "\n...(생략)"
-
-    prompt = f"""당신은 GYMPT 플랫폼(AWS/EKS 기반 피트니스 서비스)의 클라우드 보안 분석가입니다.
-다음 보안 로그 데이터를 분석하세요.
+def _build_realtime_prompt(findings_str):
+    return f"""당신은 GYMPT 플랫폼(AWS/EKS 기반 피트니스 서비스)의 클라우드 보안 분석가입니다.
+다음은 실시간으로 감지된 보안 이벤트입니다. 차단되지 않은 실제 발생 이벤트입니다.
 
 {findings_str}
+
+위협 레벨 기준:
+- CRITICAL: 계정 탈취·데이터 유출·인프라 파괴 임박
+- HIGH: 권한 상승·악성 접근·MFA 없는 로그인·보안 설정 변경
+- MEDIUM: 의심스러운 API 호출·비정상 접근 패턴
+- LOW: 일반 설정 변경·소수 오류
+- INFO: 정상 운영 범위
 
 아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
 {{
@@ -349,14 +351,73 @@ def _analyze_with_bedrock(findings, trigger):
   "summary": "발생 상황 2-3문장 요약",
   "analysis": "원인 분석 및 공격 패턴 설명",
   "runbook": ["조치 단계 1", "조치 단계 2", "조치 단계 3"]
-}}
+}}"""
 
-위협 레벨 기준:
-- CRITICAL: 계정 탈취·데이터 유출·인프라 파괴 임박
-- HIGH: 권한 상승·악성 접근·대량 WAF 차단·심각 취약점
-- MEDIUM: 비정상 접근 패턴·의심스러운 API 호출·중간 위험 취약점
-- LOW: 소수 오류·일반 설정 변경·경미한 취약점
-- INFO: 정상 운영 범위, 이상 없음"""
+
+def _build_scheduled_prompt(findings_str):
+    return f"""당신은 GYMPT 플랫폼(AWS/EKS 기반 피트니스 서비스)의 클라우드 보안 분석가입니다.
+다음은 정기 스캔 결과입니다. 아래 로그 유형별 판단 기준을 반드시 따르세요.
+
+{findings_str}
+
+=== 로그 유형별 판단 기준 ===
+
+[VPC Flow REJECT]
+Security Group 또는 NACL이 이미 차단한 트래픽입니다. 서비스에 도달하지 못했습니다.
+- 외부→내부 REJECT: 인터넷 일반 노이즈. 기본 LOW/INFO
+- 내부→내부 REJECT: SG 설정 오류 가능성. MEDIUM
+- 민감 포트(22/3306/5432/6379) 집중 반복: MEDIUM
+- 외부 트래픽은 이미 차단됐으므로 HIGH 이상 부여 금지
+
+[WAF BLOCK]
+WAF가 이미 엣지에서 차단한 트래픽입니다.
+- 소량 차단: 일반 봇 트래픽. LOW/INFO
+- 동일 IP 반복 대량 차단: 스캐닝·스크래핑 시도. MEDIUM
+- 다수 IP에서 조율된 대규모 패턴: HIGH
+
+[CloudTrail 이벤트]
+실제 발생한 API 호출입니다. 차단된 것이 아닙니다.
+- IAM 권한 변경·SG 오픈·Trail 조작: HIGH~CRITICAL
+- 알 수 없는 외부 IP에서 발생: 한 단계 올릴 것
+
+[Inspector 취약점]
+현재 인프라에 존재하는 취약점입니다. 즉각적인 공격은 아닙니다.
+- CRITICAL 점수: CRITICAL (즉시 패치 필요)
+- HIGH 점수: HIGH (빠른 패치 필요)
+- exploit_available = true인 경우: 한 단계 올릴 것
+
+[S3 이상 접근 / ALB 에러]
+대부분 클라이언트 오류 또는 잘못된 앱 설정입니다.
+- 401/403 동일 IP 반복: 인증 우회 시도 가능. MEDIUM
+- 일반 4xx/5xx: LOW
+- 명확한 대량 데이터 접근 패턴: HIGH
+
+=== 전체 위협 레벨 기준 ===
+- CRITICAL: 차단되지 않은 계정 탈취·데이터 유출 임박
+- HIGH: 실제 발생한 권한 변경·심각 취약점·조율된 대규모 공격
+- MEDIUM: 차단됐지만 주목할 패턴·내부 이상 징후·중간 위험 취약점
+- LOW: 일반 인터넷 노이즈·소수 에러·경미한 패턴
+- INFO: 정상 운영 범위
+
+아래 JSON 형식으로만 응답하세요 (다른 텍스트 없이):
+{{
+  "threat_level": "CRITICAL|HIGH|MEDIUM|LOW|INFO",
+  "summary": "발생 상황 2-3문장 요약",
+  "analysis": "원인 분석 및 공격 패턴 설명",
+  "runbook": ["조치 단계 1", "조치 단계 2", "조치 단계 3"]
+}}"""
+
+
+def _analyze_with_bedrock(findings, trigger):
+    bedrock = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+    findings_str = json.dumps(findings, ensure_ascii=False, default=str)
+    if len(findings_str) > 6000:
+        findings_str = findings_str[:6000] + "\n...(생략)"
+
+    if trigger == "schedule":
+        prompt = _build_scheduled_prompt(findings_str)
+    else:
+        prompt = _build_realtime_prompt(findings_str)
 
     try:
         resp = bedrock.invoke_model(
