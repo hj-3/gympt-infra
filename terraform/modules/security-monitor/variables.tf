@@ -72,3 +72,40 @@ variable "common_tags" {
   type    = map(string)
   default = {}
 }
+
+# ── 운영 파라미터 (Lambda 환경변수 — 콘솔에서 직접 수정 가능) ────────────────
+variable "vpc_flow_reject_threshold" {
+  description = "VPC Flow REJECT 건수 임계값 (이 값 이상이면 감지)"
+  type        = number
+  default     = 10
+}
+
+variable "vpc_flow_window_minutes" {
+  description = "VPC Flow 스캔 윈도우 (분) — 최근 N분 데이터만 스캔"
+  type        = number
+  default     = 30
+}
+
+variable "waf_block_threshold" {
+  description = "WAF 동일 IP 차단 건수 임계값"
+  type        = number
+  default     = 5
+}
+
+variable "s3_error_threshold" {
+  description = "S3 에러 응답 건수 임계값"
+  type        = number
+  default     = 5
+}
+
+variable "alb_error_threshold" {
+  description = "ALB 4xx/5xx 에러 건수 임계값"
+  type        = number
+  default     = 10
+}
+
+variable "schedule_min_level" {
+  description = "정기 스캔 알람 최소 위협 레벨 (CRITICAL / HIGH / MEDIUM / LOW)"
+  type        = string
+  default     = "HIGH"
+}

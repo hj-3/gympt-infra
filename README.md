@@ -56,6 +56,16 @@ cd gympt-infra
 - **정기 스캔**: 30분 간격으로 WAF·Inspector·VPC Flow·S3·ALB 로그 Athena 분석
 - **알림**: 위협 레벨(CRITICAL/HIGH/MEDIUM/LOW) 분류 후 Slack `#security-alerts` 채널 발송
 - **Slack webhook**: Secrets Manager `gympt/prod/slack/security-webhook-url` 참조
+- **운영 파라미터**: Lambda 환경변수로 코드 수정 없이 조정 가능 (콘솔 즉시 반영)
+
+| 환경변수 | 기본값 | 설명 |
+|---|---|---|
+| `VPC_FLOW_REJECT_THRESHOLD` | 10 | VPC Flow REJECT 건수 임계값 |
+| `VPC_FLOW_WINDOW_MINUTES` | 30 | VPC Flow 스캔 윈도우 (분) |
+| `WAF_BLOCK_THRESHOLD` | 5 | WAF 동일 IP 차단 건수 임계값 |
+| `S3_ERROR_THRESHOLD` | 5 | S3 에러 응답 건수 임계값 |
+| `ALB_ERROR_THRESHOLD` | 10 | ALB 4xx/5xx 에러 건수 임계값 |
+| `SCHEDULE_MIN_LEVEL` | HIGH | 정기 스캔 알람 최소 위협 레벨 |
 
 **네트워크 격리**
 - **VPC Endpoints SG**: egress `0.0.0.0/0` → VPC CIDR(`10.0.0.0/16`)으로 제한
@@ -69,4 +79,4 @@ cd gympt-infra
 **정리**
 - **remediation-worker**: ECR 레포, IAM 역할/정책, Terraform 코드, K8s 리소스 전체 제거 (Karpenter/HPA/ArgoCD로 기능 대체)
 
-**최종 업데이트**: 2026-06-12
+**최종 업데이트**: 2026-06-18

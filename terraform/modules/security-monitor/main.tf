@@ -169,6 +169,14 @@ resource "aws_lambda_function" "security_monitor" {
       BEDROCK_REGION    = var.bedrock_region
       BEDROCK_MODEL_ID  = var.bedrock_model_id
       SLACK_SECRET_NAME = var.slack_webhook_secret_name
+
+      # 운영 파라미터 — Lambda 콘솔에서 직접 수정하면 즉시 반영
+      VPC_FLOW_REJECT_THRESHOLD = tostring(var.vpc_flow_reject_threshold)
+      VPC_FLOW_WINDOW_MINUTES   = tostring(var.vpc_flow_window_minutes)
+      WAF_BLOCK_THRESHOLD       = tostring(var.waf_block_threshold)
+      S3_ERROR_THRESHOLD        = tostring(var.s3_error_threshold)
+      ALB_ERROR_THRESHOLD       = tostring(var.alb_error_threshold)
+      SCHEDULE_MIN_LEVEL        = var.schedule_min_level
     }
   }
 

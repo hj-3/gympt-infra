@@ -20,6 +20,16 @@ SLACK_SECRET_NAME = os.environ["SLACK_SECRET_NAME"]
 
 KST = timezone(timedelta(hours=9))
 
+# ── 운영 파라미터 (Lambda 환경변수로 코드 수정 없이 변경 가능) ─────────────────
+VPC_FLOW_REJECT_THRESHOLD = int(os.environ.get("VPC_FLOW_REJECT_THRESHOLD", "10"))
+VPC_FLOW_WINDOW_MINUTES   = int(os.environ.get("VPC_FLOW_WINDOW_MINUTES",   "30"))
+WAF_BLOCK_THRESHOLD       = int(os.environ.get("WAF_BLOCK_THRESHOLD",       "5"))
+S3_ERROR_THRESHOLD        = int(os.environ.get("S3_ERROR_THRESHOLD",        "5"))
+ALB_ERROR_THRESHOLD       = int(os.environ.get("ALB_ERROR_THRESHOLD",       "10"))
+SCHEDULE_MIN_LEVEL        = os.environ.get("SCHEDULE_MIN_LEVEL", "HIGH").upper()
+
+LEVEL_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
+
 SECURITY_EVENTS = {
     "PutUserPolicy", "AttachUserPolicy", "DetachUserPolicy",
     "CreateUser", "DeleteUser", "CreateAccessKey", "DeleteAccessKey",
@@ -234,7 +244,7 @@ WHERE (
   AND action = 'BLOCK'
   AND from_unixtime("timestamp" / 1000) > current_timestamp - interval '30' minute
 GROUP BY action, httprequest.clientip, terminatingruleid
-HAVING COUNT(*) >= 5
+HAVING COUNT(*) >= {WAF_BLOCK_THRESHOLD}
 ORDER BY block_count DESC
 LIMIT 10
 """
@@ -273,8 +283,9 @@ SELECT srcaddr, dstaddr, dstport, COUNT(*) AS reject_count
 FROM "{GLUE_DB}"."vpc_flow_logs"
 WHERE ({partition_conds})
   AND action = 'REJECT'
+  AND start > to_unixtime(current_timestamp - interval '{VPC_FLOW_WINDOW_MINUTES}' minute)
 GROUP BY srcaddr, dstaddr, dstport
-HAVING COUNT(*) >= 10
+HAVING COUNT(*) >= {VPC_FLOW_REJECT_THRESHOLD}
 ORDER BY reject_count DESC
 LIMIT 10
 """
@@ -294,7 +305,7 @@ WHERE error_code IS NOT NULL
   AND error_code NOT IN ('-', '')
   AND (request_datetime LIKE '%{today_pat}%' OR request_datetime LIKE '%{yesterday_pat}%')
 GROUP BY remote_ip, requester, operation, error_code
-HAVING COUNT(*) >= 5
+HAVING COUNT(*) >= {S3_ERROR_THRESHOLD}
 ORDER BY count DESC
 LIMIT 10
 """
@@ -313,7 +324,7 @@ FROM "{GLUE_DB}"."alb_access_logs"
 WHERE ({partition_conds})
   AND elb_status_code >= 400
 GROUP BY client_ip, request_verb, elb_status_code
-HAVING COUNT(*) >= 10
+HAVING COUNT(*) >= {ALB_ERROR_THRESHOLD}
 ORDER BY count DESC
 LIMIT 10
 """
@@ -377,7 +388,12 @@ def _analyze_with_bedrock(findings, trigger):
 def _should_alert(analysis, trigger):
     level = analysis.get("threat_level", "INFO")
     if trigger == "schedule":
-        return level in ("CRITICAL", "HIGH", "MEDIUM")
+        try:
+            min_idx = LEVEL_ORDER.index(SCHEDULE_MIN_LEVEL)
+            cur_idx = LEVEL_ORDER.index(level) if level in LEVEL_ORDER else len(LEVEL_ORDER) - 1
+        except ValueError:
+            min_idx, cur_idx = 1, len(LEVEL_ORDER) - 1
+        return cur_idx <= min_idx
     return level in ("CRITICAL", "HIGH", "MEDIUM", "LOW")
 
 
