@@ -109,6 +109,37 @@ variable "gpu_node_instance_types" {
   default     = ["g4dn.xlarge"]
 }
 
+# Karpenter NodePool resource limits (cumulative cap per pool)
+variable "karpenter_general_cpu_limit" {
+  description = "Karpenter 'general' NodePool 누적 vCPU 상한"
+  type        = string
+  default     = "100"
+}
+
+variable "karpenter_general_memory_limit" {
+  description = "Karpenter 'general' NodePool 누적 메모리 상한"
+  type        = string
+  default     = "200Gi"
+}
+
+variable "karpenter_gpu_cpu_limit" {
+  description = "Karpenter 'gpu' NodePool 누적 vCPU 상한"
+  type        = string
+  default     = "32"
+}
+
+variable "karpenter_gpu_memory_limit" {
+  description = "Karpenter 'gpu' NodePool 누적 메모리 상한"
+  type        = string
+  default     = "128Gi"
+}
+
+variable "karpenter_gpu_count_limit" {
+  description = "Karpenter 'gpu' NodePool 누적 nvidia.com/gpu 상한"
+  type        = string
+  default     = "4"
+}
+
 # EKS Addons
 variable "vpc_cni_version" {
   description = "VPC CNI addon version"

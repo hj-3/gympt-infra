@@ -37,10 +37,6 @@ variable "pod_service_accounts" {
       namespace       = "report-service"
       service_account = "report-service"
     }
-    remediation-worker = {
-      namespace       = "workers"
-      service_account = "remediation-worker"
-    }
     generic-worker = {
       namespace       = "workers"
       service_account = "generic-worker"
@@ -71,4 +67,14 @@ variable "bedrock_region" {
   type        = string
   description = "AWS region for Bedrock service"
   default     = "us-west-2"
+}
+
+variable "bedrock_agent_id" {
+  type        = string
+  description = "Bedrock Agent ID for agent-service InvokeAgent permission"
+}
+
+variable "kvs_signaling_channel_arn" {
+  type        = string
+  description = "KVS Signaling Channel ARN for posture-analysis-service"
 }

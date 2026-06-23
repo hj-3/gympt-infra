@@ -1,3 +1,9 @@
+variable "enabled" {
+  description = "false로 설정하면 ElastiCache 전체 삭제 (비용 절감용). true로 되돌리면 재생성."
+  type        = bool
+  default     = true
+}
+
 variable "project_name" {
   description = "Project name"
   type        = string

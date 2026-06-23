@@ -27,7 +27,7 @@ resource "aws_iam_role" "eks_pod_role" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_pod_s3" {
-  for_each   = var.pod_service_accounts
+  for_each   = { for k, v in var.pod_service_accounts : k => v if k != "posture-analysis-service" }
   role       = aws_iam_role.eks_pod_role[each.key].name
   policy_arn = aws_iam_policy.pod_s3_access.arn
 }
@@ -50,9 +50,107 @@ resource "aws_iam_policy" "pod_s3_access" {
 }
 
 resource "aws_iam_role_policy_attachment" "eks_pod_dynamodb" {
-  for_each   = var.pod_service_accounts
+  for_each   = { for k, v in var.pod_service_accounts : k => v if k != "agent-service" && k != "posture-analysis-service" }
   role       = aws_iam_role.eks_pod_role[each.key].name
   policy_arn = aws_iam_policy.pod_dynamodb_access.arn
+}
+
+resource "aws_iam_policy" "agent_service_dynamodb" {
+  name = "${local.name_prefix}-agent-service-dynamodb"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:Query",
+        "dynamodb:Scan"
+      ]
+      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${local.name_prefix}-agent_interactions"
+    }]
+  })
+  tags = var.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "agent_service_dynamodb" {
+  role       = aws_iam_role.eks_pod_role["agent-service"].name
+  policy_arn = aws_iam_policy.agent_service_dynamodb.arn
+}
+
+# posture-analysis-service 전용 정책
+resource "aws_iam_policy" "posture_analysis_s3" {
+  name = "${local.name_prefix}-posture-analysis-s3"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:GetObject"]
+        Resource = "arn:aws:s3:::${local.name_prefix}-media-${data.aws_caller_identity.current.account_id}/*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
+        Resource = "arn:aws:s3:::${local.name_prefix}-media-${data.aws_caller_identity.current.account_id}"
+      }
+    ]
+  })
+  tags = var.common_tags
+}
+
+resource "aws_iam_policy" "posture_analysis_dynamodb" {
+  name = "${local.name_prefix}-posture-analysis-dynamodb"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:Query",
+        "dynamodb:Scan",
+        "dynamodb:BatchWriteItem"
+      ]
+      Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${local.name_prefix}-posture_events"
+    }]
+  })
+  tags = var.common_tags
+}
+
+resource "aws_iam_policy" "posture_analysis_kvs_signaling" {
+  name = "${local.name_prefix}-posture-analysis-kvs-signaling"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kinesisvideo:ConnectAsMaster",
+        "kinesisvideo:GetSignalingChannelEndpoint",
+        "kinesisvideo:DescribeSignalingChannel",
+        "kinesisvideo:GetIceServerConfig"
+      ]
+      Resource = var.kvs_signaling_channel_arn
+    }]
+  })
+  tags = var.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "posture_analysis_s3" {
+  role       = aws_iam_role.eks_pod_role["posture-analysis-service"].name
+  policy_arn = aws_iam_policy.posture_analysis_s3.arn
+}
+
+resource "aws_iam_role_policy_attachment" "posture_analysis_dynamodb" {
+  role       = aws_iam_role.eks_pod_role["posture-analysis-service"].name
+  policy_arn = aws_iam_policy.posture_analysis_dynamodb.arn
+}
+
+resource "aws_iam_role_policy_attachment" "posture_analysis_kvs_signaling" {
+  role       = aws_iam_role.eks_pod_role["posture-analysis-service"].name
+  policy_arn = aws_iam_policy.posture_analysis_kvs_signaling.arn
 }
 
 resource "aws_iam_policy" "pod_dynamodb_access" {
@@ -92,12 +190,14 @@ resource "aws_iam_policy" "pod_bedrock_access" {
         ]
       },
       {
-        Effect = "Allow"
-        Action = [
-          "bedrock:InvokeAgent",
-          "bedrock:Retrieve"
-        ]
-        Resource = "*"
+        Effect   = "Allow"
+        Action   = ["bedrock:InvokeAgent"]
+        Resource = "arn:aws:bedrock:${var.bedrock_region}:${data.aws_caller_identity.current.account_id}:agent/${var.bedrock_agent_id}"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["bedrock:Retrieve"]
+        Resource = "arn:aws:bedrock:${var.bedrock_region}:${data.aws_caller_identity.current.account_id}:knowledge-base/*"
       }
     ]
   })

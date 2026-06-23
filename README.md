@@ -15,12 +15,12 @@ GYMPT 플랫폼을 위한 Infrastructure as Code. Terraform을 사용하여 완�
 
 Terraform은 중앙 S3 로그 버킷의 주요 보안/운영 로그를 Athena로 조회할 수 있도록 Glue Catalog Table을 생성합니다.
 
-- `alb_access_logs`: `alb-access-logs/`
+- `alb_access_logs`: `alb-access-logs/` (partition projection)
 - `cloudfront_access_logs`: `cloudfront-logs/`
 - `cloudtrail_logs`: `cloudtrail/`
 - `inspector_findings`: `inspector-findings/` (partition projection)
 - `s3_access_logs`: `s3-access-logs/`
-- `vpc_flow_logs`: `vpc-flow-logs/`
+- `vpc_flow_logs`: `vpc-flow-logs/` (partition projection)
 - `waf_alb_logs`: `waf-logs/alb/` (partition projection)
 - `waf_cloudfront_logs`: `waf-logs/cloudfront/` (partition projection)
 
@@ -43,4 +43,40 @@ cd gympt-infra
 
 **저장소**: https://github.com/hj-3/gympt-infra
 
-**최종 업데이트**: 2026-06-08
+### 보안 설정 현황
+
+**감사 및 로깅**
+- **CloudTrail**: multi-region, log file validation, KMS CMK 암호화(`alias/gympt-prod-cloudtrail`), S3 적재
+- **EKS control plane 로그**: OFF (`enabled_cluster_log_types = []`) — 시연 시 수동 on
+- **CloudWatch 로그 보존**: EKS control plane 로그 그룹 retention 1일
+
+**AI 보안관제 시스템**
+- **구성**: EventBridge → Lambda → Bedrock (Claude Haiku 4.5) → Slack
+- **실시간 감지**: CloudTrail 보안 이벤트 (IAM·SG·Trail·S3 정책 변경 등 20종), MFA 없는 콘솔 로그인
+- **정기 스캔**: 30분 간격으로 WAF·Inspector·VPC Flow·S3·ALB 로그 Athena 분석
+- **알림**: 위협 레벨(CRITICAL/HIGH/MEDIUM/LOW) 분류 후 Slack `#security-alerts` 채널 발송
+- **Slack webhook**: Secrets Manager `gympt/prod/slack/security-webhook-url` 참조
+- **운영 파라미터**: Lambda 환경변수로 코드 수정 없이 조정 가능 (콘솔 즉시 반영)
+
+| 환경변수 | 기본값 | 설명 |
+|---|---|---|
+| `VPC_FLOW_REJECT_THRESHOLD` | 10 | VPC Flow REJECT 건수 임계값 |
+| `VPC_FLOW_WINDOW_MINUTES` | 30 | VPC Flow 스캔 윈도우 (분) |
+| `WAF_BLOCK_THRESHOLD` | 5 | WAF 동일 IP 차단 건수 임계값 |
+| `S3_ERROR_THRESHOLD` | 5 | S3 에러 응답 건수 임계값 |
+| `ALB_ERROR_THRESHOLD` | 10 | ALB 4xx/5xx 에러 건수 임계값 |
+| `SCHEDULE_MIN_LEVEL` | HIGH | 정기 스캔 알람 최소 위협 레벨 |
+
+**네트워크 격리**
+- **VPC Endpoints SG**: egress `0.0.0.0/0` → VPC CIDR(`10.0.0.0/16`)으로 제한
+
+**IRSA 최소 권한**
+- **ECR Pull**: 노드 역할 `AmazonEC2ContainerRegistryReadOnly` 제거 → `gympt-prod/*` 레포 한정 커스텀 정책
+- **IMDSv2 hop limit**: Karpenter EC2NodeClass `httpPutResponseHopLimit: 1` — 파드의 노드 IMDS 접근 차단
+- **agent-service**: Bedrock `InvokeAgent` → `agent/WPQ0RESSZS` 한정, `Retrieve` → 계정 KB 한정, DynamoDB → `agent_interactions` 테이블 전용
+- **posture-analysis-service**: S3 → `media` 버킷 한정(`PutObject`/`GetObject`/`ListBucket`), DynamoDB → `posture_events` 테이블 전용, KVS Signaling → `prod-live-sessions-signaling` 채널 전용
+
+**정리**
+- **remediation-worker**: ECR 레포, IAM 역할/정책, Terraform 코드, K8s 리소스 전체 제거 (Karpenter/HPA/ArgoCD로 기능 대체)
+
+**최종 업데이트**: 2026-06-18

@@ -24,11 +24,8 @@ resource "aws_cloudwatch_event_rule" "inspector_findings" {
   tags = var.common_tags
 }
 
-resource "aws_cloudwatch_event_target" "inspector_to_sns" {
-  rule      = aws_cloudwatch_event_rule.inspector_findings.name
-  target_id = "InspectorToSNS"
-  arn       = aws_sns_topic.inspector_alerts.arn
-}
+# Inspector 알림은 AI 보안관제(security-monitor Lambda)가 S3에서 읽어 처리하므로
+# SNS/Chatbot 직접 발송 경로 제거
 
 # SNS → EventBridge 허용 정책
 resource "aws_sns_topic_policy" "inspector_alerts" {

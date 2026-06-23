@@ -28,8 +28,18 @@ resource "aws_glue_catalog_table" "alb_access_logs" {
   table_type    = "EXTERNAL_TABLE"
 
   parameters = {
-    EXTERNAL       = "TRUE"
-    classification = "regex"
+    EXTERNAL                    = "TRUE"
+    classification              = "regex"
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2026,2035"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.digits"     = "2"
+    "storage.location.template" = "s3://${var.logs_bucket}/alb-access-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/elasticloadbalancing/${data.aws_region.current.name}/$${year}/$${month}/$${day}/"
   }
 
   storage_descriptor {
@@ -177,6 +187,19 @@ resource "aws_glue_catalog_table" "alb_access_logs" {
       type = "string"
     }
   }
+
+  partition_keys {
+    name = "year"
+    type = "string"
+  }
+  partition_keys {
+    name = "month"
+    type = "string"
+  }
+  partition_keys {
+    name = "day"
+    type = "string"
+  }
 }
 
 resource "aws_glue_catalog_table" "cloudtrail_logs" {
@@ -303,9 +326,19 @@ resource "aws_glue_catalog_table" "vpc_flow_logs" {
   table_type    = "EXTERNAL_TABLE"
 
   parameters = {
-    EXTERNAL       = "TRUE"
-    classification = "csv"
-    delimiter      = " "
+    EXTERNAL                    = "TRUE"
+    classification              = "csv"
+    delimiter                   = " "
+    "projection.enabled"        = "true"
+    "projection.year.type"      = "integer"
+    "projection.year.range"     = "2026,2035"
+    "projection.month.type"     = "integer"
+    "projection.month.range"    = "1,12"
+    "projection.month.digits"   = "2"
+    "projection.day.type"       = "integer"
+    "projection.day.range"      = "1,31"
+    "projection.day.digits"     = "2"
+    "storage.location.template" = "s3://${var.logs_bucket}/vpc-flow-logs/AWSLogs/${data.aws_caller_identity.current.account_id}/vpcflowlogs/${data.aws_region.current.name}/$${year}/$${month}/$${day}/"
   }
 
   storage_descriptor {
@@ -377,6 +410,19 @@ resource "aws_glue_catalog_table" "vpc_flow_logs" {
       name = "log_status"
       type = "string"
     }
+  }
+
+  partition_keys {
+    name = "year"
+    type = "string"
+  }
+  partition_keys {
+    name = "month"
+    type = "string"
+  }
+  partition_keys {
+    name = "day"
+    type = "string"
   }
 }
 

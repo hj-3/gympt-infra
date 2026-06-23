@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = "~> 2.0"
     }
+    archive = {
+      source  = "hashicorp/archive"
+      version = "~> 2.0"
+    }
   }
 
   backend "s3" {
@@ -79,12 +83,14 @@ module "s3" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  project_name         = local.project_name
-  env                  = local.env
-  aws_region           = local.aws_region
-  vpc_cidr             = "10.1.0.0/16"
-  flow_logs_bucket_arn = module.s3.logs_bucket_arn
-  common_tags          = local.common_tags
+  project_name             = local.project_name
+  env                      = local.env
+  aws_region               = local.aws_region
+  vpc_cidr                 = "10.1.0.0/16"
+  flow_logs_bucket_arn     = module.s3.logs_bucket_arn
+  nat_gateway_count        = 0     # ← down: 0 / up: 1
+  enable_cluster_endpoints = false # ← down: false / up: true
+  common_tags              = local.common_tags
 }
 
 module "ecr" {
@@ -100,25 +106,32 @@ module "ecr" {
 module "eks" {
   source = "../../modules/eks"
 
-  project_name                  = local.project_name
-  env                           = local.env
-  aws_region                    = local.aws_region
-  vpc_id                        = module.vpc.vpc_id
-  private_subnet_ids            = module.vpc.private_app_subnet_ids
-  cluster_version               = "1.35"
-  enable_public_access          = true
-  public_access_cidrs           = var.eks_public_access_cidrs
-  node_instance_types           = ["t3.xlarge"]
-  node_desired_size             = 1 # Karpenter handles general workloads; 1 system node only
-  node_min_size                 = 1
-  node_max_size                 = 20
-  enable_gpu_node_group         = true
-  gpu_node_instance_types       = ["g4dn.xlarge"]
-  gpu_node_desired_size         = 0 # Karpenter handles GPU nodes via gpu NodePool
-  gpu_node_min_size             = 0
-  gpu_node_max_size             = 3
-  bootstrap_self_managed_addons = false # 추가
-  common_tags                   = local.common_tags
+  project_name            = local.project_name
+  env                     = local.env
+  aws_region              = local.aws_region
+  vpc_id                  = module.vpc.vpc_id
+  private_subnet_ids      = module.vpc.private_app_subnet_ids
+  cluster_version         = "1.35"
+  enable_public_access    = true
+  public_access_cidrs     = var.eks_public_access_cidrs
+  node_instance_types     = ["t3.medium"] # 시스템 노드용 (Karpenter/CoreDNS/ArgoCD)
+  node_desired_size       = 1             # ← down: 0으로 스크립트 조정 / up: 1
+  node_min_size           = 0
+  node_max_size           = 3 # 시스템 노드는 최대 3으로 충분
+  enable_gpu_node_group   = true
+  gpu_node_instance_types = ["g4dn.xlarge"]
+  gpu_node_desired_size   = 0 # Karpenter handles GPU nodes via gpu NodePool
+  gpu_node_min_size       = 0
+  gpu_node_max_size       = 3
+  # Karpenter NodePool 한도 (값 변경 시 여기 한 줄만 PR). 기본값 = 현재값 → no-op
+  karpenter_general_cpu_limit    = "100"
+  karpenter_general_memory_limit = "200Gi"
+  karpenter_gpu_cpu_limit        = "32"
+  karpenter_gpu_memory_limit     = "128Gi"
+  karpenter_gpu_count_limit      = "4"
+  bootstrap_self_managed_addons  = false # 추가
+  enabled_cluster_log_types      = []    # 비용 절감: control plane 로그 OFF
+  common_tags                    = local.common_tags
 
 }
 
@@ -179,6 +192,7 @@ module "dynamodb" {
 module "elasticache" {
   source = "../../modules/elasticache"
 
+  enabled          = false # ← down: false / up: true
   project_name     = local.project_name
   env              = local.env
   vpc_id           = module.vpc.vpc_id
@@ -194,10 +208,10 @@ module "elasticache" {
   node_type                  = "cache.t3.medium"
   num_cache_nodes            = 2
   engine_version             = "7.0"
-  auth_token_enabled         = true
+  auth_token_enabled         = false
   auth_token                 = var.redis_auth_token
-  automatic_failover_enabled = true
-  multi_az_enabled           = true
+  automatic_failover_enabled = false
+  multi_az_enabled           = false
   snapshot_retention_limit   = 7
   common_tags                = local.common_tags
 }
@@ -292,15 +306,17 @@ module "eventbridge" {
 module "iam" {
   source = "../../modules/iam"
 
-  project_name        = local.project_name
-  env                 = local.env
-  aws_region          = local.aws_region
-  bedrock_region      = "us-west-2"
-  oidc_provider_arn   = module.eks.oidc_provider_arn
-  oidc_provider_url   = module.eks.oidc_provider_url
-  s3_bucket_arns      = values(module.s3.bucket_arns)
-  dynamodb_table_arns = values(module.dynamodb.table_arns)
-  common_tags         = local.common_tags
+  project_name              = local.project_name
+  env                       = local.env
+  aws_region                = local.aws_region
+  bedrock_region            = "us-west-2"
+  bedrock_agent_id          = "WPQ0RESSZS"
+  kvs_signaling_channel_arn = "arn:aws:kinesisvideo:ap-northeast-2:337112169365:channel/prod-live-sessions-signaling/1779644737658"
+  oidc_provider_arn         = module.eks.oidc_provider_arn
+  oidc_provider_url         = module.eks.oidc_provider_url
+  s3_bucket_arns            = values(module.s3.bucket_arns)
+  dynamodb_table_arns       = values(module.dynamodb.table_arns)
+  common_tags               = local.common_tags
 
   pod_service_accounts = {
     backend-api = {
@@ -318,10 +334,6 @@ module "iam" {
     report-service = {
       namespace       = "gympt-prod"
       service_account = "report-service-prod"
-    }
-    remediation-worker = {
-      namespace       = "gympt-prod"
-      service_account = "remediation-worker-prod"
     }
     kvs-consumer-service = {
       namespace       = "gympt-prod"
@@ -367,6 +379,7 @@ module "cloudtrail" {
   s3_bucket_name      = module.s3.logs_bucket_id
   s3_bucket_policy_id = module.s3.logs_bucket_policy_id
   common_tags         = local.common_tags
+  kms_key_id          = "arn:aws:kms:ap-northeast-2:337112169365:key/63574ed7-d86f-434f-86f5-295cf5788fe2"
 }
 
 module "athena" {
@@ -553,4 +566,24 @@ module "inspector" {
   env             = local.env
   logs_bucket_arn = module.s3.logs_bucket_arn
   common_tags     = local.common_tags
+}
+
+module "security_monitor" {
+  source = "../../modules/security-monitor"
+
+  project_name              = local.project_name
+  env                       = local.env
+  aws_region                = local.aws_region
+  account_id                = local.account_id
+  glue_database_name        = module.glue.catalog_database_name
+  athena_results_bucket_id  = module.s3.athena_results_bucket_id
+  athena_results_bucket_arn = module.s3.athena_results_bucket_arn
+  logs_bucket_arn           = module.s3.logs_bucket_arn
+  logs_bucket_id            = module.s3.logs_bucket_id
+  slack_webhook_secret_name = "gympt/prod/slack/security-webhook-url"
+  slack_webhook_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:${local.account_id}:secret:gympt/prod/slack/security-webhook-url-bln6XW"
+  bedrock_region            = "us-west-2"
+  bedrock_model_id          = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+  log_retention_days        = 30
+  common_tags               = local.common_tags
 }
