@@ -144,3 +144,9 @@ resource "aws_cloudwatch_event_target" "inspector_to_firehose" {
   arn       = aws_kinesis_firehose_delivery_stream.inspector.arn
   role_arn  = aws_iam_role.eventbridge_firehose.arn
 }
+
+resource "aws_cloudwatch_event_target" "inspector_to_sns" {
+  rule      = aws_cloudwatch_event_rule.inspector_findings.name
+  target_id = "InspectorToSns"
+  arn       = aws_sns_topic.inspector_alerts.arn
+}

@@ -25,3 +25,10 @@ output "dlq_arns" {
     for k, v in aws_sqs_queue.dlq : k => v.arn
   }
 }
+
+output "dlq_names" {
+  description = "DLQ names"
+  value = {
+    for k, v in aws_sqs_queue.dlq : k => v.name
+  }
+}

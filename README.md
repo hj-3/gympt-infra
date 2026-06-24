@@ -30,6 +30,35 @@ Athena 쿼리 결과는 Athena results S3 bucket의 `athena-results/` prefix에 
 
 Grafana는 `grafana-athena-datasource`와 `gympt-prod-grafana-athena` IRSA role로 Athena/Glue/S3 로그를 조회합니다.
 
+### CloudWatch 알림 체계
+
+2026-06-24 기준 prod는 AWS 리소스 경보를 CloudWatch Alarm → SNS → AWS Chatbot → Slack 경로로 보냅니다.
+
+- **운영 알림 채널**: Slack channel `C0B6C0F1JB0`
+- **보안 알림 채널**: Slack channel `C0B8L829W92`
+- **보안 이벤트**: CloudTrail root activity, 콘솔 로그인 실패/MFA 미사용, IAM/SG/Trail/S3 정책 변경은 보안 SNS topic과 security-monitor Lambda 양쪽으로 전달
+- **Billing/Cost 알람**: 회사 계정 권한 제약으로 Terraform 관리 대상에서 제외
+- **S3 request metrics**: 사용자 요청 경로인 FE bucket(`gympt-fe-deploy-<account_id>`)과 media bucket만 활성화
+
+최종 CloudWatch 경보 범위:
+
+| 영역 | 경보 대상 |
+|---|---|
+| EKS/노드 | CPU, memory, node filesystem, ContainerInsights 기반 노드 지표 |
+| ALB | target 5xx, ALB 5xx, unhealthy host, target response time, rejected connection, TLS negotiation error |
+| CloudFront | `modules/cloudfront-monitoring`에서 us-east-1 provider alias로 5xx/4xx/total error rate, origin latency, request spike 관리 |
+| RDS PostgreSQL | CPU, free storage, free memory, DB connections, read/write latency, read/write IOPS, deadlocks |
+| Lambda | errors, duration, throttles, concurrent executions, async event age, DLQ/destination delivery failure |
+| SQS | oldest message age, visible messages, in-flight messages, DLQ messages, receive/delete imbalance |
+| DynamoDB | system errors, user errors, read/write throttles, transaction conflicts, consumed read/write spike |
+| ElastiCache | CPU, memory, evictions, current connections, engine CPU, swap usage, replication lag |
+| S3 | bucket size/object count, 4xx/5xx request errors, first-byte latency, request spike |
+| WAF | blocked, counted, CAPTCHA, challenge request spike |
+| KVS | PutMedia/GetMedia errors, incoming bytes low; active session peak은 GitOps PrometheusRule에서 관리 |
+| EventBridge | failed invocations, throttled rules, dead-letter invocations |
+| Inspector | HIGH/CRITICAL findings → Firehose/S3 및 SNS/Chatbot |
+| Athena/Glue | Athena query failures, processed bytes spike |
+
 ### 빠른 배포
 
 ```bash
@@ -79,4 +108,4 @@ cd gympt-infra
 **정리**
 - **remediation-worker**: ECR 레포, IAM 역할/정책, Terraform 코드, K8s 리소스 전체 제거 (Karpenter/HPA/ArgoCD로 기능 대체)
 
-**최종 업데이트**: 2026-06-18
+**최종 업데이트**: 2026-06-24

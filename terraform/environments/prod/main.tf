@@ -38,6 +38,15 @@ provider "aws" {
   }
 }
 
+provider "aws" {
+  alias  = "use1"
+  region = "us-east-1"
+
+  default_tags {
+    tags = local.common_tags
+  }
+}
+
 provider "kubernetes" {
   host                   = module.eks.cluster_endpoint
   cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
@@ -178,6 +187,7 @@ module "rds" {
   multi_az                = true
   backup_retention_period = 30
   deletion_protection     = true
+  alarm_actions           = [module.cloudwatch.sns_topic_arn]
   common_tags             = local.common_tags
 }
 
@@ -213,6 +223,7 @@ module "elasticache" {
   automatic_failover_enabled = false
   multi_az_enabled           = false
   snapshot_retention_limit   = 7
+  alarm_actions              = [module.cloudwatch.sns_topic_arn]
   common_tags                = local.common_tags
 }
 
@@ -223,8 +234,54 @@ data "aws_s3_bucket" "existing_frontend" {
   bucket = "gympt-fe-deploy-${local.account_id}"
 }
 
+resource "aws_s3_bucket_metric" "frontend_requests" {
+  bucket = data.aws_s3_bucket.existing_frontend.id
+  name   = "EntireBucket"
+}
+
 data "aws_cloudfront_distribution" "existing_frontend" {
   id = var.cloudfront_distribution_id
+}
+
+module "cloudfront_monitoring" {
+  source = "../../modules/cloudfront-monitoring"
+
+  providers = {
+    aws = aws.use1
+  }
+
+  project_name    = local.project_name
+  env             = local.env
+  distribution_id = data.aws_cloudfront_distribution.existing_frontend.id
+  slack_workspace_id = "T0B30UFQ45S"
+  slack_channel_id   = "C0B6C0F1JB0"
+  common_tags     = local.common_tags
+}
+
+data "aws_lbs" "gympt_prod" {
+  tags = {
+    "ingress.k8s.aws/stack" = "gympt-prod"
+    "elbv2.k8s.aws/cluster" = module.eks.cluster_name
+  }
+}
+
+data "aws_lb" "gympt_prod" {
+  count = length(data.aws_lbs.gympt_prod.arns) == 1 ? 1 : 0
+  arn   = one(data.aws_lbs.gympt_prod.arns)
+}
+
+data "aws_resourcegroupstaggingapi_resources" "gympt_prod_target_groups" {
+  resource_type_filters = ["elasticloadbalancing:targetgroup"]
+
+  tag_filter {
+    key    = "ingress.k8s.aws/stack"
+    values = ["gympt-prod"]
+  }
+
+  tag_filter {
+    key    = "elbv2.k8s.aws/cluster"
+    values = [module.eks.cluster_name]
+  }
 }
 
 module "github_oidc" {
@@ -269,7 +326,7 @@ module "lambda" {
   vpc_security_group_ids = [module.eks.node_security_group_id]
   xray_tracing_enabled   = true
   log_retention_days     = 30
-  alarm_actions          = [] # CloudWatch SNS topic will be added after module is created
+  alarm_actions          = [module.cloudwatch.sns_topic_arn]
   common_tags            = local.common_tags
 
   sqs_event_sources = {
@@ -364,11 +421,12 @@ module "cloudwatch" {
   env                     = local.env
   aws_region              = local.aws_region
   alarm_email             = var.alarm_email
-  log_retention_days      = 30
-  slack_workspace_id      = "T0B30UFQ45S"
-  slack_channel_id        = "C0B8L829W92"
-  inspector_sns_topic_arn = module.inspector.sns_topic_arn
-  common_tags             = local.common_tags
+  log_retention_days        = 30
+  slack_workspace_id        = "T0B30UFQ45S"
+  slack_channel_id          = "C0B6C0F1JB0"
+  security_slack_channel_id = "C0B8L829W92"
+  inspector_sns_topic_arn   = module.inspector.sns_topic_arn
+  common_tags               = local.common_tags
 }
 
 module "cloudtrail" {
@@ -513,16 +571,39 @@ resource "aws_iam_role_policy" "grafana_athena" {
 module "monitoring" {
   source = "../../modules/monitoring"
 
-  project_name      = local.project_name
-  env               = local.env
-  aws_region        = local.aws_region
-  eks_cluster_name  = module.eks.cluster_name
-  sqs_queue_names   = module.sqs.queue_names
-  sns_topic_arn     = module.cloudwatch.sns_topic_arn
-  cpu_threshold     = 80
-  memory_threshold  = 85
-  sqs_age_threshold = 300
-  common_tags       = local.common_tags
+  project_name                  = local.project_name
+  env                           = local.env
+  aws_region                    = local.aws_region
+  eks_cluster_name              = module.eks.cluster_name
+  sqs_queue_names               = module.sqs.queue_names
+  sqs_dlq_names                 = module.sqs.dlq_names
+  sns_topic_arn                 = module.cloudwatch.sns_topic_arn
+  rds_instance_id               = module.rds.db_instance_id
+  lambda_function_names         = module.lambda.lambda_function_names
+  dynamodb_table_names          = module.dynamodb.table_names
+  alb_load_balancer_arn_suffix  = try(data.aws_lb.gympt_prod[0].arn_suffix, null)
+  alb_target_group_arn_suffixes = {
+    for resource in data.aws_resourcegroupstaggingapi_resources.gympt_prod_target_groups.resource_tag_mapping_list :
+    replace(resource.resource_arn, "/^.*:targetgroup\\//", "") => "targetgroup/${replace(resource.resource_arn, "/^.*:targetgroup\\//", "")}"
+  }
+  s3_request_metric_buckets = {
+    frontend = data.aws_s3_bucket.existing_frontend.id
+    media    = module.s3.media_bucket_id
+  }
+  waf_web_acl_metrics = {
+    alb = {
+      web_acl = "gympt-alb-waf"
+      region  = local.aws_region
+      rule    = "ALL"
+    }
+  }
+  kvs_stream_names             = module.kvs.stream_names
+  eventbridge_rule_names       = module.eventbridge.rule_names
+  athena_workgroup_names       = { logs = module.athena.workgroup_name }
+  cpu_threshold                = 80
+  memory_threshold             = 85
+  sqs_age_threshold            = 300
+  common_tags                  = local.common_tags
 }
 
 module "kvs" {
@@ -582,6 +663,7 @@ module "security_monitor" {
   logs_bucket_id            = module.s3.logs_bucket_id
   slack_webhook_secret_name = "gympt/prod/slack/security-webhook-url"
   slack_webhook_secret_arn  = "arn:aws:secretsmanager:ap-northeast-2:${local.account_id}:secret:gympt/prod/slack/security-webhook-url-bln6XW"
+  security_sns_topic_arn    = module.cloudwatch.security_sns_topic_arn
   bedrock_region            = "us-west-2"
   bedrock_model_id          = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
   log_retention_days        = 30

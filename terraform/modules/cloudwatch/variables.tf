@@ -35,6 +35,11 @@ variable "slack_channel_id" {
   default = null
 }
 
+variable "security_slack_channel_id" {
+  type    = string
+  default = null
+}
+
 variable "inspector_sns_topic_arn" {
   type    = string
   default = null

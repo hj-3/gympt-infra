@@ -219,6 +219,13 @@ resource "aws_cloudwatch_event_target" "critical_cloudtrail" {
   arn       = aws_lambda_function.security_monitor.arn
 }
 
+resource "aws_cloudwatch_event_target" "critical_cloudtrail_sns" {
+  count     = var.security_sns_topic_arn != null ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.critical_cloudtrail.name
+  target_id = "SecurityAlertsSns"
+  arn       = var.security_sns_topic_arn
+}
+
 resource "aws_lambda_permission" "critical_cloudtrail" {
   statement_id  = "AllowEventBridgeCriticalCloudTrail"
   action        = "lambda:InvokeFunction"
@@ -251,12 +258,99 @@ resource "aws_cloudwatch_event_target" "console_login_no_mfa" {
   arn       = aws_lambda_function.security_monitor.arn
 }
 
+resource "aws_cloudwatch_event_target" "console_login_no_mfa_sns" {
+  count     = var.security_sns_topic_arn != null ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.console_login_no_mfa.name
+  target_id = "SecurityAlertsSns"
+  arn       = var.security_sns_topic_arn
+}
+
 resource "aws_lambda_permission" "console_login_no_mfa" {
   statement_id  = "AllowEventBridgeConsoleLogin"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.security_monitor.function_name
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.console_login_no_mfa.arn
+}
+
+# ── EventBridge Rule 3: Root 계정 활동 감지 ─────────────────────────────────
+resource "aws_cloudwatch_event_rule" "root_activity" {
+  name        = "${local.name_prefix}-security-root-activity"
+  description = "Root account activity detection"
+
+  event_pattern = jsonencode({
+    "detail-type" = [
+      "AWS API Call via CloudTrail",
+      "AWS Console Sign In via CloudTrail"
+    ]
+    detail = {
+      userIdentity = {
+        type = ["Root"]
+      }
+    }
+  })
+
+  tags = var.common_tags
+}
+
+resource "aws_cloudwatch_event_target" "root_activity" {
+  rule      = aws_cloudwatch_event_rule.root_activity.name
+  target_id = "SecurityMonitorLambda"
+  arn       = aws_lambda_function.security_monitor.arn
+}
+
+resource "aws_cloudwatch_event_target" "root_activity_sns" {
+  count     = var.security_sns_topic_arn != null ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.root_activity.name
+  target_id = "SecurityAlertsSns"
+  arn       = var.security_sns_topic_arn
+}
+
+resource "aws_lambda_permission" "root_activity" {
+  statement_id  = "AllowEventBridgeRootActivity"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.security_monitor.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.root_activity.arn
+}
+
+# ── EventBridge Rule 4: 콘솔 로그인 실패 감지 ────────────────────────────────
+resource "aws_cloudwatch_event_rule" "console_login_failure" {
+  name        = "${local.name_prefix}-security-console-login-failure"
+  description = "Failed AWS Console login detection"
+
+  event_pattern = jsonencode({
+    source        = ["aws.signin"]
+    "detail-type" = ["AWS Console Sign In via CloudTrail"]
+    detail = {
+      responseElements = {
+        ConsoleLogin = ["Failure"]
+      }
+    }
+  })
+
+  tags = var.common_tags
+}
+
+resource "aws_cloudwatch_event_target" "console_login_failure" {
+  rule      = aws_cloudwatch_event_rule.console_login_failure.name
+  target_id = "SecurityMonitorLambda"
+  arn       = aws_lambda_function.security_monitor.arn
+}
+
+resource "aws_cloudwatch_event_target" "console_login_failure_sns" {
+  count     = var.security_sns_topic_arn != null ? 1 : 0
+  rule      = aws_cloudwatch_event_rule.console_login_failure.name
+  target_id = "SecurityAlertsSns"
+  arn       = var.security_sns_topic_arn
+}
+
+resource "aws_lambda_permission" "console_login_failure" {
+  statement_id  = "AllowEventBridgeConsoleLoginFailure"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.security_monitor.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.console_login_failure.arn
 }
 
 # ── EventBridge Rule 3: 30분 정기 스캔 ───────────────────────────────────────

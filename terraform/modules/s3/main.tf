@@ -15,6 +15,11 @@ resource "aws_s3_bucket" "media" {
   )
 }
 
+resource "aws_s3_bucket_metric" "media_requests" {
+  bucket = aws_s3_bucket.media.id
+  name   = "EntireBucket"
+}
+
 resource "aws_s3_bucket_lifecycle_configuration" "media" {
   bucket = aws_s3_bucket.media.id
 

@@ -50,6 +50,12 @@ variable "slack_webhook_secret_arn" {
   type        = string
 }
 
+variable "security_sns_topic_arn" {
+  description = "SNS topic ARN for CloudTrail security alerts routed through AWS Chatbot"
+  type        = string
+  default     = null
+}
+
 variable "bedrock_region" {
   description = "AWS region where Bedrock model is invoked"
   type        = string
