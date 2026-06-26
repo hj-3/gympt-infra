@@ -133,7 +133,7 @@ module "eks" {
   gpu_node_min_size       = 0
   gpu_node_max_size       = 3
   # Karpenter NodePool 한도 (값 변경 시 여기 한 줄만 PR). 기본값 = 현재값 → no-op
-  karpenter_general_cpu_limit    = "100"
+  karpenter_general_cpu_limit    = "150"
   karpenter_general_memory_limit = "200Gi"
   karpenter_gpu_cpu_limit        = "32"
   karpenter_gpu_memory_limit     = "128Gi"
