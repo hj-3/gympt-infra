@@ -205,20 +205,6 @@ module "s3" {
   common_tags  = local.common_tags
 }
 
-# CloudFront
-module "cloudfront" {
-  source = "../../modules/cloudfront"
-
-  project_name                = local.project_name
-  env                         = local.env
-  frontend_bucket_id          = module.s3.frontend_bucket_id
-  frontend_bucket_arn         = module.s3.frontend_bucket_arn
-  frontend_bucket_domain_name = module.s3.frontend_bucket_domain_name
-  price_class                 = "PriceClass_100"
-  enable_spa_routing          = true
-  common_tags                 = local.common_tags
-}
-
 # GitHub Actions OIDC
 module "github_oidc" {
   source = "../../modules/github-oidc"
@@ -233,7 +219,7 @@ module "github_oidc" {
   ecr_repository_arns          = values(module.ecr.repository_arns)
   frontend_bucket_arn          = module.s3.frontend_bucket_arn
   lambda_artifacts_bucket_arn  = module.s3.lambda_artifacts_bucket_arn
-  cloudfront_distribution_arns = [module.cloudfront.distribution_arn]
+  cloudfront_distribution_arns = []
   common_tags                  = local.common_tags
 }
 
